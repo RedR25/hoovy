@@ -1,0 +1,12 @@
+# Deps for talk_to_gemma.py — kept separate from the backend env.
+ollama>=0.4.0
+sounddevice>=0.5.0
+numpy>=1.26
+
+# TTS — Kokoro is the primary backend (neural, 24 kHz).
+# Pulls PyTorch (~750 MB) + misaki for English G2P (no espeak needed).
+# First run downloads the model (~325 MB) from HuggingFace.
+kokoro>=0.9.4
+
+# Tiny fallback if Kokoro fails to load (e.g. no internet on first run).
+pyttsx3>=2.90
