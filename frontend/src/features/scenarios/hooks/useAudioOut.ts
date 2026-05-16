@@ -9,12 +9,15 @@ interface UseAudioOutReturn {
   isPlaying: boolean;
   /** Duration of the loaded audio clip in seconds (0 until loaded). */
   duration: number;
+  /** Current playback time in seconds; updated via `timeupdate`. */
+  currentTime: number;
   error: string | null;
 }
 
 export function useAudioOut(): UseAudioOutReturn {
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -38,6 +41,7 @@ export function useAudioOut(): UseAudioOutReturn {
     revokeObjectUrl();
     setIsPlaying(false);
     setDuration(0);
+    setCurrentTime(0);
   }, []);
 
   const play = useCallback(
@@ -68,10 +72,14 @@ export function useAudioOut(): UseAudioOutReturn {
           audio.addEventListener("loadedmetadata", () => {
             setDuration(audio.duration);
           });
+          audio.addEventListener("timeupdate", () => {
+            setCurrentTime(audio.currentTime);
+          });
 
           audio.addEventListener("play", () => setIsPlaying(true));
           audio.addEventListener("ended", () => {
             setIsPlaying(false);
+            setCurrentTime(audio.duration || 0);
             revokeObjectUrl();
           });
           audio.addEventListener("pause", () => setIsPlaying(false));
@@ -118,9 +126,11 @@ export function useAudioOut(): UseAudioOutReturn {
         audioRef.current = audio;
 
         audio.addEventListener("loadedmetadata", () => setDuration(audio.duration));
+        audio.addEventListener("timeupdate", () => setCurrentTime(audio.currentTime));
         audio.addEventListener("play", () => setIsPlaying(true));
         audio.addEventListener("ended", () => {
           setIsPlaying(false);
+          setCurrentTime(audio.duration || 0);
           resolve();
         });
         audio.addEventListener("pause", () => setIsPlaying(false));
@@ -139,5 +149,5 @@ export function useAudioOut(): UseAudioOutReturn {
     [stop],
   );
 
-  return { play, playDataUrl, stop, isPlaying, duration, error };
+  return { play, playDataUrl, stop, isPlaying, duration, currentTime, error };
 }

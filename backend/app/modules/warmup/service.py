@@ -20,9 +20,34 @@ log = logging.getLogger(__name__)
 
 # Module-level status so /api/v1/warmup can report results.
 _status: dict[str, str] = {"kokoro": "pending", "ollama": "pending"}
+_lock = asyncio.Lock()
+_inflight: asyncio.Task | None = None
 
 
 def get_warmup_status() -> dict[str, str]:
+    return dict(_status)
+
+
+def trigger_warmup_if_needed() -> dict[str, str]:
+    """Fire warmup as a background task if it hasn't completed yet.
+
+    Idempotent — returns immediately. Multiple concurrent callers share one
+    task. Once kokoro+ollama are both 'ok', further calls are no-ops.
+    """
+    global _inflight  # noqa: PLW0603
+
+    done = _status["kokoro"] == "ok" and _status["ollama"] == "ok"
+    if done:
+        return dict(_status)
+    if _inflight is not None and not _inflight.done():
+        return dict(_status)
+
+    try:
+        loop = asyncio.get_running_loop()
+        _inflight = loop.create_task(run_warmup())
+    except RuntimeError:
+        # No running loop — caller is sync; nothing we can do here.
+        pass
     return dict(_status)
 
 
@@ -55,32 +80,19 @@ async def run_warmup() -> None:
         _status["kokoro"] = msg[:120]
         log.warning("warmup: Kokoro pre-warm failed — %s", exc)
 
-    # --- Ollama/Gemma ---
+    # --- Ollama/Gemma — text-only ping to load weights into RAM. ---
+    # Audio + Kokoro + Gemma multimodal in parallel was OOMing the model
+    # runner; text-only loads the same weights minus the projector.
     try:
-        silent_wav = _make_silent_wav(duration_s=0.5)
-
         def _ollama_warmup() -> None:
             import ollama  # noqa: PLC0415
 
-            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-                tmp.write(silent_wav)
-                wav_path = Path(tmp.name)
-
-            try:
-                client = ollama.Client(host=settings.ollama_host)
-                client.chat(
-                    model=settings.ollama_model,
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": "Warmup ping. Reply with the single word: ready",
-                            "images": [str(wav_path)],
-                        }
-                    ],
-                    options={"temperature": 0.0, "num_predict": 5},
-                )
-            finally:
-                wav_path.unlink(missing_ok=True)
+            client = ollama.Client(host=settings.ollama_host)
+            client.chat(
+                model=settings.ollama_model,
+                messages=[{"role": "user", "content": "Reply with: ready"}],
+                options={"temperature": 0.0, "num_predict": 4},
+            )
 
         await loop.run_in_executor(None, _ollama_warmup)
         _status["ollama"] = "ok"

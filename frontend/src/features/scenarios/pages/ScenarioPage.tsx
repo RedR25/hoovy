@@ -7,7 +7,6 @@ import { SpeechBubble } from "@/features/scenarios/components/SpeechBubble";
 import { ProgressBar } from "@/features/scenarios/components/ProgressBar";
 import { KidNameModal } from "@/features/scenarios/components/KidNameModal";
 import { ResponseInput } from "@/features/scenarios/components/ResponseInput";
-import { GazeCalibration } from "@/features/scenarios/components/GazeCalibration";
 import { GazeMonitor } from "@/features/scenarios/components/GazeMonitor";
 import { useAudioOut } from "@/features/scenarios/hooks/useAudioOut";
 import { useAudioIn } from "@/features/scenarios/hooks/useAudioIn";
@@ -17,7 +16,6 @@ import { useGaze } from "@/features/scenarios/hooks/useGaze";
 import type { SessionRead, EvaluateResponse } from "@/features/scenarios/types";
 
 // ── Constants ──────────────────────────────────────────────────────────────
-const RESUME_TTL_MS = 60 * 60 * 1000; // 1 hour
 const MIN_BLOB_BYTES = 1024; // blobs smaller than this are "silent"
 
 const REDIRECT_PHRASES = [
@@ -27,42 +25,6 @@ const REDIRECT_PHRASES = [
   "Hey, I'm over here!",
   "Come back, we're almost done!",
 ];
-
-interface ResumeState {
-  scenarioId: string;
-  sessionId: string;
-  stepIndex: number;
-  attempt: number;
-  timestamp: number;
-}
-
-function loadResume(scenarioId: string): ResumeState | null {
-  try {
-    const raw = localStorage.getItem("hoovy_active_scenario");
-    if (!raw) return null;
-    const parsed: ResumeState = JSON.parse(raw);
-    if (
-      parsed.scenarioId === scenarioId &&
-      Date.now() - parsed.timestamp < RESUME_TTL_MS
-    ) {
-      return parsed;
-    }
-  } catch {
-    // ignore malformed
-  }
-  return null;
-}
-
-function saveResume(state: Omit<ResumeState, "timestamp">) {
-  localStorage.setItem(
-    "hoovy_active_scenario",
-    JSON.stringify({ ...state, timestamp: Date.now() }),
-  );
-}
-
-function clearResume() {
-  localStorage.removeItem("hoovy_active_scenario");
-}
 
 interface Feedback {
   text: string;
@@ -74,18 +36,10 @@ export function ScenarioPage() {
   const navigate = useNavigate();
   const { data: scenario, isLoading, isError } = useScenario(scenarioId ?? "");
 
-  // ── Persisted state (session resume) ──────────────────────────────────────
-  const resumeRef = useRef<ResumeState | null>(
-    scenarioId ? loadResume(scenarioId) : null,
-  );
-
-  const [sessionId, setSessionId] = useState<string | null>(
-    resumeRef.current?.sessionId ?? null,
-  );
-  const [currentStep, setCurrentStep] = useState(
-    resumeRef.current?.stepIndex ?? 0,
-  );
-  const [attempt, setAttempt] = useState(resumeRef.current?.attempt ?? 1);
+  // ── Session + progress state — fresh on every scenario open ─────────────
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [attempt, setAttempt] = useState(1);
 
   // ── UI state ─────────────────────────────────────────────────────────────
   const [feedback, setFeedback] = useState<Feedback | null>(null);
@@ -97,19 +51,12 @@ export function ScenarioPage() {
     !localStorage.getItem("hoovy_kid_name"),
   );
 
-  // ── Gaze tracking state ───────────────────────────────────────────────────
-  const [gazeEnabled, setGazeEnabled] = useState(
-    () => localStorage.getItem("hoovy_gaze_enabled") === "true",
-  );
-  const [showCalibration, setShowCalibration] = useState(
-    () =>
-      localStorage.getItem("hoovy_gaze_enabled") === "true" &&
-      localStorage.getItem("hoovy_gaze_calibrated") !== "true",
-  );
+  // ── Gaze tracking — always on, no calibration step, no toggle ────────────
+  const gazeEnabled = true;
   const redirectCountRef = useRef(0);
   const stepStartRef = useRef(Date.now());
 
-  const { play, playDataUrl, stop, isPlaying, duration } = useAudioOut();
+  const { play, playDataUrl, stop, isPlaying, duration, currentTime } = useAudioOut();
   const { start, stop: stopRec, isRecording, blob, mimeType, error: micError } =
     useAudioIn();
   const { evaluate, isEvaluating: isVoiceEvaluating } = useEvaluate();
@@ -126,7 +73,7 @@ export function ScenarioPage() {
   }, [play]);
 
   const { gazePosition, currentlyOnScreen, offScreenSeconds } = useGaze({
-    enabled: gazeEnabled && !showCalibration,
+    enabled: gazeEnabled,
     onAttentionDrop: handleAttentionDrop,
   });
 
@@ -134,11 +81,13 @@ export function ScenarioPage() {
 
   const step = scenario?.steps[currentStep];
 
-  // ── Session creation (skip if resuming) ──────────────────────────────────
+  // ── Session creation: fresh on every scenario open ──────────────────────
   useEffect(() => {
-    if (sessionId || !scenarioId) return; // already have one (resumed)
+    if (!scenarioId) return;
 
     const kidName = localStorage.getItem("hoovy_kid_name") || "Anonymous";
+    let createdId: string | null = null;
+
     axios
       .post<SessionRead>("/api/v1/sessions", {
         scenario_id: scenarioId,
@@ -146,26 +95,21 @@ export function ScenarioPage() {
         language: "en",
       })
       .then((res) => {
+        createdId = res.data.id;
         setSessionId(res.data.id);
+        console.log("[hoovy] session created", res.data.id);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("[hoovy] session create failed", err);
         showToast("Could not start session. Check your connection.");
       });
 
     return () => {
-      // fire-and-forget end session on unmount
-      if (sessionId) {
-        axios.post(`/api/v1/sessions/${sessionId}/end`).catch(() => {});
+      if (createdId) {
+        axios.post(`/api/v1/sessions/${createdId}/end`).catch(() => {});
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scenarioId]);
-
-  // ── Persist resume state on step/attempt/session changes ──────────────────
-  useEffect(() => {
-    if (!scenarioId || !sessionId) return;
-    saveResume({ scenarioId, sessionId, stepIndex: currentStep, attempt });
-  }, [scenarioId, sessionId, currentStep, attempt]);
 
   // ── POST attention log for previous step on step change ──────────────────
   const postAttentionLog = useCallback(
@@ -202,8 +146,7 @@ export function ScenarioPage() {
     redirectCountRef.current = 0;
     stepStartRef.current = Date.now();
 
-    setAttempt(resumeRef.current?.attempt ?? 1);
-    resumeRef.current = null; // only use resume data once
+    setAttempt(1);
     setFeedback(null);
     setShowHint(false);
     setMicEnabled(false);
@@ -224,6 +167,30 @@ export function ScenarioPage() {
     }
   }, [isPlaying, isEvaluating, feedback]);
 
+  // ── AUTO-START recording when teacher finishes speaking ──────────────────
+  // Re-armed on every (currentStep, attempt) so retries also auto-record.
+  const autoStartedRef = useRef(false);
+  useEffect(() => {
+    autoStartedRef.current = false;
+  }, [currentStep, attempt]);
+
+  useEffect(() => {
+    if (autoStartedRef.current) return;
+    if (isPlaying || isEvaluating || isRecording || feedback) return;
+    if (!step || !sessionId || micUnavailable) return;
+    if (step.response_type === "tap" || step.response_type === "choice") return;
+
+    autoStartedRef.current = true;
+    // Brief pause so the kid hears the prompt end before the mic snaps on.
+    const t = setTimeout(() => {
+      console.log("[hoovy] auto-starting mic");
+      start();
+    }, 400);
+    return () => clearTimeout(t);
+  }, [isPlaying, isEvaluating, isRecording, feedback, step, sessionId, micUnavailable, start]);
+
+  // VAD inside useAudioIn now handles auto-stop on silence. No timer here.
+
   // ── Surface mic permission errors ────────────────────────────────────────
   useEffect(() => {
     if (micError) {
@@ -243,7 +210,6 @@ export function ScenarioPage() {
         advanceTimerRef.current = setTimeout(() => {
           const isLast = currentStep === (scenario?.steps.length ?? 1) - 1;
           if (isLast) {
-            clearResume();
             navigate("/");
           } else {
             setCurrentStep((s) => s + 1);
@@ -264,8 +230,10 @@ export function ScenarioPage() {
   useEffect(() => {
     if (!blob || !sessionId || !step || isEvaluating) return;
 
-    // Guard: blob too small = silence
+    console.log("[hoovy] blob ready", { size: blob.size, mimeType });
+
     if (blob.size < MIN_BLOB_BYTES) {
+      console.warn("[hoovy] blob too small, ignoring", blob.size);
       showToast("I didn't hear anything. Try once more.");
       setMicEnabled(true);
       return;
@@ -274,6 +242,7 @@ export function ScenarioPage() {
     const run = async () => {
       setMicEnabled(false);
       try {
+        console.log("[hoovy] POST /api/v1/evaluate", { sessionId, stepId: step.id, attempt });
         const result = await evaluate({
           sessionId,
           scenarioId: scenarioId ?? "",
@@ -282,8 +251,10 @@ export function ScenarioPage() {
           blob,
           mimeType,
         });
+        console.log("[hoovy] eval result", result);
         await handleEvaluateResult(result);
-      } catch {
+      } catch (err) {
+        console.error("[hoovy] eval failed", err);
         showToast("Teacher didn't catch that. Let's try again.");
         setMicEnabled(true);
       }
@@ -334,31 +305,6 @@ export function ScenarioPage() {
     setTimeout(() => setToast(null), 3500);
   }
 
-  function handleToggleGaze() {
-    if (gazeEnabled) {
-      // Disable
-      localStorage.setItem("hoovy_gaze_enabled", "false");
-      setGazeEnabled(false);
-      setShowCalibration(false);
-    } else {
-      // Enable — show calibration if not yet done
-      localStorage.setItem("hoovy_gaze_enabled", "true");
-      setGazeEnabled(true);
-      if (localStorage.getItem("hoovy_gaze_calibrated") !== "true") {
-        setShowCalibration(true);
-      }
-    }
-  }
-
-  function handleCalibrationComplete() {
-    setShowCalibration(false);
-  }
-
-  function handleCalibrationSkip() {
-    setShowCalibration(false);
-    // Gaze stays enabled but uncalibrated — WebGazer still works
-  }
-
   // ── Determine effective response type (force choice if mic unavailable) ───
   const effectiveResponseType =
     micUnavailable && step?.response_type === "voice"
@@ -394,14 +340,6 @@ export function ScenarioPage() {
 
   return (
     <div className="min-h-screen bg-hoovy-bg px-4 py-6 font-friendly flex flex-col max-w-xl mx-auto gap-5">
-      {/* Gaze calibration overlay — renders outside the scrollable content */}
-      {showCalibration && (
-        <GazeCalibration
-          onComplete={handleCalibrationComplete}
-          onSkip={handleCalibrationSkip}
-        />
-      )}
-
       {/* Dev gaze HUD */}
       <GazeMonitor
         gazePosition={gazePosition}
@@ -443,13 +381,10 @@ export function ScenarioPage() {
         </div>
       )}
 
-      {/* Back + title + gaze toggle */}
+      {/* Back + title */}
       <div className="flex items-center gap-3">
         <button
-          onClick={() => {
-            clearResume();
-            navigate("/");
-          }}
+          onClick={() => navigate("/")}
           className="text-hoovy-purple font-bold text-sm hover:underline"
         >
           Back
@@ -457,18 +392,6 @@ export function ScenarioPage() {
         <h1 className="font-extrabold text-xl text-gray-800 truncate flex-1">
           {scenario.title}
         </h1>
-        <button
-          onClick={handleToggleGaze}
-          title={gazeEnabled ? "Disable eye tracking" : "Enable eye tracking"}
-          className={[
-            "text-xs font-semibold px-3 py-1 rounded-xl border-2 transition-all",
-            gazeEnabled
-              ? "border-hoovy-purple text-hoovy-purple bg-purple-50 hover:bg-purple-100"
-              : "border-gray-300 text-gray-400 hover:border-hoovy-purple hover:text-hoovy-purple",
-          ].join(" ")}
-        >
-          {gazeEnabled ? "Eye on" : "Eye off"}
-        </button>
       </div>
 
       {/* Progress */}
@@ -504,7 +427,7 @@ export function ScenarioPage() {
         <VirtualTeacher speaking={isPlaying} />
         <SpeechBubble
           text={feedback ? feedback.text : step.teacher_prompt}
-          durationMs={duration > 0 ? duration * 1000 : undefined}
+          progress={duration > 0 ? currentTime / duration : 0}
         />
       </div>
 
@@ -563,10 +486,7 @@ export function ScenarioPage() {
         <div className="mt-auto">
           {isLast ? (
             <button
-              onClick={() => {
-                clearResume();
-                navigate("/");
-              }}
+              onClick={() => navigate("/")}
               className="w-full py-4 bg-hoovy-green text-white font-extrabold text-lg rounded-2xl hover:opacity-90 active:scale-95 transition-all shadow-md"
             >
               Finish!

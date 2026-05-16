@@ -1,19 +1,19 @@
-"""Warmup router — exposes current warmup status via GET/POST."""
+"""Warmup router — trigger + report warmup status."""
 from fastapi import APIRouter
 
-from app.modules.warmup.service import get_warmup_status
+from app.modules.warmup.service import get_warmup_status, trigger_warmup_if_needed
 
 router = APIRouter(prefix="/warmup", tags=["warmup"])
 
 
 @router.post("")
-async def trigger_warmup_status() -> dict[str, str]:
-    """Return current warmup status for Kokoro and Ollama.
+async def kick_warmup() -> dict[str, str]:
+    """Fire warmup if not already done. Idempotent.
 
-    The actual warmup runs as a background task on startup; this endpoint
-    just reports whatever state it reached. Useful for smoke-testing the demo.
+    Frontend calls this when a scenario card is clicked so by the time
+    the kid records, Gemma's audio encoder is already paged into RAM.
     """
-    return get_warmup_status()
+    return trigger_warmup_if_needed()
 
 
 @router.get("")

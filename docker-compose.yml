@@ -1,33 +1,54 @@
+# Hoovy stack: Ollama (Gemma 4 E2B) + monolith app (FastAPI + SPA + in-process Kokoro).
+#
+# Postgres is intentionally absent — the hackathon runs on SQLite to keep the
+# stack to two containers. Switch DATABASE_URL back to asyncpg if you grow into
+# Postgres later (and add the service block back from git history).
+
 services:
-  db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: hoovy
-      POSTGRES_PASSWORD: hoovy
-      POSTGRES_DB: hoovy
+  ollama:
+    image: ollama/ollama:latest
+    container_name: hoovy-ollama
     ports:
-      - "5432:5432"
+      - "11434:11434"
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - ollama_models:/root/.ollama
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U hoovy"]
-      interval: 5s
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
       timeout: 3s
-      retries: 10
+      retries: 5
 
   app:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: hoovy-app
     environment:
-      DATABASE_URL: postgresql+asyncpg://hoovy:hoovy@db:5432/hoovy
+      # SQLite file lives inside the container at /app/hoovy.db; mount a volume
+      # below if you want it to survive container rebuilds.
+      DATABASE_URL: sqlite+aiosqlite:///./hoovy.db
       SECRET_KEY: dev-only-not-secret
       CORS_ORIGINS: '["http://localhost:8000"]'
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: gemma4:e2b
+      KOKORO_VOICE: af_bella
+      KOKORO_SPEED: "0.9"
+      LANGUAGE: en
+      MOCK_AI: "false"
+      # GEMINI_API_KEY: set this in a .env file next to docker-compose.yml
+      #                 to enable real image generation; otherwise placeholders.
     ports:
       - "8000:8000"
+    volumes:
+      # Persist generated scenarios + image cache outside the container.
+      - ./scenarios:/app/scenarios
+      - hoovy_db:/app/db
     depends_on:
-      db:
+      ollama:
         condition: service_healthy
+    restart: unless-stopped
 
 volumes:
-  db_data:
+  ollama_models:
+  hoovy_db:

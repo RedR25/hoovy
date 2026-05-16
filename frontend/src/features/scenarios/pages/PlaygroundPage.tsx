@@ -63,7 +63,13 @@ export function PlaygroundPage() {
             <ScenarioCard
               key={s.id}
               scenario={s}
-              onClick={(id) => navigate(`/scenario/${id}`)}
+              onClick={(id) => {
+                // Fire-and-forget: warm Kokoro + Gemma while the kid is still
+                // on this page so the first record→eval call doesn't pay the
+                // cold-start cost (~10–15s).
+                axios.post("/api/v1/warmup").catch(() => {});
+                navigate(`/scenario/${id}`);
+              }}
             />
           ))}
         </main>

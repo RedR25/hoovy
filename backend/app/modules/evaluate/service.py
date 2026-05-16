@@ -158,10 +158,11 @@ class EvaluateService(BaseService):
 
             try:
                 expected = step.voice_accepts or [c.text for c in step.choices if c.is_correct]
-                system_prompt = _PROMPT_TEMPLATE.format(
-                    teacher_prompt=step.teacher_prompt,
-                    expected=expected,
-                    attempt=attempt_number,
+                system_prompt = (
+                    _PROMPT_TEMPLATE
+                    .replace("{teacher_prompt}", step.teacher_prompt)
+                    .replace("{expected}", str(expected))
+                    .replace("{attempt}", str(attempt_number))
                 )
 
                 loop = asyncio.get_event_loop()
