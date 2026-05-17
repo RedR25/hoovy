@@ -1,0 +1,61 @@
+{
+  "id": "greet-teacher",
+  "title": "Greeting the teacher",
+  "skill_domain": "communication",
+  "difficulty": 1,
+  "thumbnail_url": "/static/images/greet-teacher/thumb.png",
+  "estimated_minutes": 3,
+  "language": "en",
+  "child_interests": null,
+  "steps": [
+    {
+      "id": "step-1",
+      "order": 1,
+      "teacher_prompt": "Hi there! My name is Hoovy. Can you say hello back to me?",
+      "scene_image_url": "/static/images/greet-teacher/step-1.png",
+      "scene_image_prompt": "A friendly kindergarten teacher waving warmly, soft warm pastel colors, cartoon kid-friendly illustration, plain pastel background, diverse appearance, no text",
+      "response_type": "voice_or_choice",
+      "choices": [
+        { "id": "a", "text": "Hi Hoovy!", "is_correct": true },
+        { "id": "b", "text": "Goodbye!", "is_correct": false },
+        { "id": "c", "text": "(say nothing)", "is_correct": false }
+      ],
+      "voice_accepts": ["hi", "hello", "hi hoovy", "hello hoovy", "hey"],
+      "hint_on_wrong": "When you meet a teacher, you say 'Hi' or 'Hello'. Try again.",
+      "hint_image_url": "/static/images/greet-teacher/step-1-hint.png",
+      "praise_on_correct": "Great job! That was a very nice greeting.",
+      "max_attempts": 3
+    },
+    {
+      "id": "step-2",
+      "order": 2,
+      "teacher_prompt": "Wonderful! Now tell me your name. You can say, 'My name is...'",
+      "scene_image_url": "/static/images/greet-teacher/step-2.png",
+      "scene_image_prompt": "Friendly teacher leaning down with a kind smile, listening attentively, soft warm pastel colors, cartoon kid-friendly illustration, plain pastel background, no text",
+      "response_type": "voice",
+      "choices": [],
+      "voice_accepts": ["my name is", "i am", "i'm", "name is"],
+      "hint_on_wrong": "Try saying 'My name is' and then your name.",
+      "hint_image_url": "/static/images/greet-teacher/step-2-hint.png",
+      "praise_on_correct": "What a lovely name! It's nice to meet you.",
+      "max_attempts": 3
+    },
+    {
+      "id": "step-3",
+      "order": 3,
+      "teacher_prompt": "Class is over for today. How do we say goodbye to our teacher?",
+      "scene_image_url": "/static/images/greet-teacher/step-3.png",
+      "scene_image_prompt": "Friendly teacher waving goodbye warmly at the end of class, soft warm pastel colors, cartoon kid-friendly illustration, plain pastel background, no text",
+      "response_type": "voice_or_choice",
+      "choices": [
+        { "id": "a", "text": "Goodbye, Hoovy!", "is_correct": true },
+        { "id": "b", "text": "Hello!", "is_correct": false },
+        { "id": "c", "text": "(walk away silently)", "is_correct": false }
+      ],
+      "voice_accepts": ["goodbye", "bye", "see you", "see you later", "bye bye"],
+      "hint_on_wrong": "When we leave, we say 'Goodbye' or 'Bye'. Try again.",
+      "hint_image_url": "/static/images/greet-teacher/step-3-hint.png",
+      "praise_on_correct": "Perfect! See you next time."
+    }
+  ]
+}

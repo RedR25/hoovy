@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MediaPipe Face Mesh + Iris · Hoovy test rig</title>
+  <style>
+    * { box-sizing: border-box }
+    html, body { margin: 0; padding: 0; height: 100%; background: #0f1116; color: #e6e6e6;
+      font: 14px/1.4 system-ui, -apple-system, Segoe UI, sans-serif; overflow: hidden; }
+
+    #stage {
+      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    }
+    #cam, #overlay {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scaleX(-1);
+      width: min(90vw, 1280px); height: auto; max-height: 90vh;
+      border-radius: 18px; background: #000;
+    }
+    #overlay { pointer-events: none; }
+
+    #panel {
+      position: fixed; left: 16px; top: 16px; width: 400px; max-height: calc(100vh - 32px);
+      background: rgba(20,22,28,0.92); border: 1px solid #2a2e38; border-radius: 12px;
+      padding: 16px; backdrop-filter: blur(6px); z-index: 10; overflow-y: auto;
+    }
+    h1 { margin: 0 0 8px; font-size: 16px; letter-spacing: 0.02em; }
+    h2 { margin: 14px 0 6px; font-size: 13px; color: #a3b5cf; text-transform: uppercase; letter-spacing: 0.06em; }
+    .row { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0;
+      border-bottom: 1px dashed #2a2e38; font-variant-numeric: tabular-nums; font-size: 13px; }
+    .row b { color: #a3b5cf; font-weight: 600; }
+    .row span { color: #fff; }
+    .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-weight: 700; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; }
+    .pill.ok { background: #1a7f37; color: #d4ffe2; }
+    .pill.warn { background: #b08800; color: #fff8d4; }
+    .pill.err { background: #b00020; color: #ffd9df; }
+    .pill.idle { background: #2a2e38; color: #a3b5cf; }
+
+    #log { margin-top: 10px; max-height: 180px; overflow-y: auto;
+      font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: #a3b5cf; }
+    #log .e { display: block; }
+    #log .e.err { color: #ff7a85; }
+    #log .e.ok  { color: #7ee2a8; }
+
+    #gazePoint {
+      position: fixed; width: 28px; height: 28px; border-radius: 50%;
+      background: #ff3b30; border: 3px solid #fff; pointer-events: none; z-index: 20;
+      transform: translate(-50%, -50%); transition: top 60ms linear, left 60ms linear;
+      mix-blend-mode: difference;
+    }
+    #gazePoint.hidden { display: none; }
+
+    #bounds {
+      position: fixed; pointer-events: none; z-index: 9;
+      border: 2px dashed rgba(126, 226, 168, 0.4);
+      top: 40px; left: 40px; right: 40px; bottom: 40px;
+    }
+
+    .btn { background: #6c5ce7; color: #fff; border: 0; padding: 6px 12px; border-radius: 8px;
+      font-weight: 700; font-size: 12px; cursor: pointer; margin-right: 6px; margin-top: 6px; }
+    .btn.ghost { background: transparent; border: 1px solid #3a3f4c; color: #a3b5cf; }
+    .btn:hover { filter: brightness(1.1); }
+
+    .small { font-size: 11px; color: #a3b5cf; line-height: 1.5; }
+  </style>
+</head>
+<body>
+
+<div id="stage">
+  <video id="cam" autoplay playsinline muted></video>
+  <canvas id="overlay"></canvas>
+</div>
+
+<div id="bounds"></div>
+<div id="gazePoint" class="hidden"></div>
+
+<div id="panel">
+  <h1>MediaPipe Face Mesh + Iris</h1>
+
+  <h2>Pipeline</h2>
+  <div class="row"><b>WASM bundle</b><span id="wasmStatus"><span class="pill idle">…</span></span></div>
+  <div class="row"><b>Model load</b><span id="modelStatus"><span class="pill idle">…</span></span></div>
+  <div class="row"><b>Camera</b><span id="camStatus"><span class="pill idle">—</span></span></div>
+  <div class="row"><b>FPS</b><span id="fps">0.0</span></div>
+  <div class="row"><b>Face found</b><span id="faceFound"><span class="pill idle">—</span></span></div>
+
+  <h2>Iris signal</h2>
+  <div class="row"><b>L iris (norm)</b><span id="lIris">—</span></div>
+  <div class="row"><b>R iris (norm)</b><span id="rIris">—</span></div>
+  <div class="row"><b>Gaze ratio X</b><span id="gazeRatioX">—</span></div>
+  <div class="row"><b>Gaze ratio Y</b><span id="gazeRatioY">—</span></div>
+
+  <h2>Mapped gaze (with click-calibration)</h2>
+  <div class="row"><b>Cal samples</b><span id="calCount">0</span></div>
+  <div class="row"><b>Predicted (px)</b><span id="predXY">—</span></div>
+  <div class="row"><b>On-screen</b><span id="onScreen"><span class="pill idle">—</span></span></div>
+
+  <div>
+    <button class="btn" id="btnCal">9-pt calibrate</button>
+    <button class="btn ghost" id="btnReset">Reset cal</button>
+    <button class="btn ghost" id="btnClear">Clear log</button>
+  </div>
+  <p class="small">Click anywhere on the page to add a calibration sample (eye signal at that moment → click pixel). After ~10 clicks the gaze dot starts following you.</p>
+
+  <h2>Log</h2>
+  <div id="log"></div>
+</div>
+
+<script type="module">
+import {
+  FilesetResolver,
+  FaceLandmarker,
+} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/+esm";
+
+const $ = (id) => document.getElementById(id);
+const pill = (label, kind) => `<span class="pill ${kind}">${label}</span>`;
+const log = (msg, cls = "") => {
+  const el = $("log");
+  const e = document.createElement("span");
+  e.className = "e " + cls;
+  e.textContent = `[${new Date().toISOString().slice(11,19)}] ${msg}`;
+  el.appendChild(e);
+  el.scrollTop = el.scrollHeight;
+};
+
+const MARGIN = 40;
+let video, canvas, ctx;
+let faceLandmarker = null;
+let lastVideoTime = -1;
+let fpsWindow = { t: Date.now(), n: 0 };
+
+// Calibration samples: each entry = { feat: [gxRatio, gyRatio], target: [px, py] }
+const cal = [];
+let regressionW = null; // 2x3 matrix mapping [gx, gy, 1] -> [px, py]
+
+// MediaPipe iris landmark indices (with refine_landmarks=true).
+// Each "iris" cluster is 5 points; index 0 is the center.
+const LEFT_IRIS = [468, 469, 470, 471, 472];
+const RIGHT_IRIS = [473, 474, 475, 476, 477];
+const LEFT_EYE_CORNERS  = [33, 133];  // outer, inner
+const RIGHT_EYE_CORNERS = [362, 263]; // inner, outer
+const LEFT_EYE_TOPBOT   = [159, 145];
+const RIGHT_EYE_TOPBOT  = [386, 374];
+
+// ── Bootstrap MediaPipe ─────────────────────────────────────────────────
+async function start() {
+  $("wasmStatus").innerHTML = pill("loading", "warn");
+  log("loading MediaPipe Tasks Vision WASM");
+  let vision;
+  try {
+    vision = await FilesetResolver.forVisionTasks(
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm"
+    );
+    $("wasmStatus").innerHTML = pill("ready", "ok");
+  } catch (e) {
+    $("wasmStatus").innerHTML = pill("failed", "err");
+    log("WASM load failed: " + e, "err");
+    return;
+  }
+
+  $("modelStatus").innerHTML = pill("loading", "warn");
+  try {
+    faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath:
+          "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+        delegate: "GPU",
+      },
+      outputFaceBlendshapes: false,
+      outputFacialTransformationMatrixes: false,
+      runningMode: "VIDEO",
+      numFaces: 1,
+    });
+    $("modelStatus").innerHTML = pill("ready", "ok");
+    log("face landmarker ready", "ok");
+  } catch (e) {
+    $("modelStatus").innerHTML = pill("failed", "err");
+    log("model load failed: " + e, "err");
+    return;
+  }
+
+  // ── Camera ───────────────────────────────────────────────────────────
+  video = $("cam");
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: 1280, height: 720, facingMode: "user" },
+      audio: false,
+    });
+    video.srcObject = stream;
+    await new Promise((r) => video.addEventListener("loadeddata", r, { once: true }));
+    $("camStatus").innerHTML = pill("granted", "ok");
+    log("camera streaming " + video.videoWidth + "×" + video.videoHeight, "ok");
+  } catch (e) {
+    $("camStatus").innerHTML = pill("denied", "err");
+    log("camera denied: " + e, "err");
+    return;
+  }
+
+  canvas = $("overlay");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  ctx = canvas.getContext("2d");
+  requestAnimationFrame(loop);
+}
+
+// ── Per-frame inference ─────────────────────────────────────────────────
+function loop() {
+  if (!faceLandmarker || video.readyState < 2) {
+    requestAnimationFrame(loop);
+    return;
+  }
+  const t = performance.now();
+  if (video.currentTime !== lastVideoTime) {
+    lastVideoTime = video.currentTime;
+    const res = faceLandmarker.detectForVideo(video, t);
+    render(res);
+    fpsWindow.n++;
+    const elapsed = Date.now() - fpsWindow.t;
+    if (elapsed >= 500) {
+      $("fps").textContent = ((fpsWindow.n * 1000) / elapsed).toFixed(1);
+      fpsWindow = { t: Date.now(), n: 0 };
+    }
+  }
+  requestAnimationFrame(loop);
+}
+
+let lastGazeFeat = null; // [gxRatio, gyRatio] for click calibration
+
+function render(res) {
+  ctx.save();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!res.faceLandmarks || res.faceLandmarks.length === 0) {
+    $("faceFound").innerHTML = pill("no", "warn");
+    $("lIris").textContent = "—";
+    $("rIris").textContent = "—";
+    $("gazeRatioX").textContent = "—";
+    $("gazeRatioY").textContent = "—";
+    lastGazeFeat = null;
+    ctx.restore();
+    return;
+  }
+  const lm = res.faceLandmarks[0];
+  $("faceFound").innerHTML = pill("yes", "ok");
+
+  // Draw simple face landmarks (subset, just enough to look meaningful).
+  ctx.fillStyle = "rgba(0, 220, 255, 0.45)";
+  for (let i = 0; i < lm.length; i += 4) {
+    const p = lm[i];
+    ctx.beginPath();
+    ctx.arc(p.x * canvas.width, p.y * canvas.height, 1.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Iris centers
+  const li = lm[LEFT_IRIS[0]];
+  const ri = lm[RIGHT_IRIS[0]];
+  ctx.strokeStyle = "#7ee2a8";
+  ctx.lineWidth = 2.5;
+  drawIris(li, lm[LEFT_IRIS[1]], lm[LEFT_IRIS[3]]);
+  drawIris(ri, lm[RIGHT_IRIS[1]], lm[RIGHT_IRIS[3]]);
+
+  // Eye corners + top/bottom (used to compute gaze ratio)
+  const [lCo, lCi] = LEFT_EYE_CORNERS.map((i) => lm[i]);
+  const [rCi, rCo] = RIGHT_EYE_CORNERS.map((i) => lm[i]);
+  const [lTop, lBot] = LEFT_EYE_TOPBOT.map((i) => lm[i]);
+  const [rTop, rBot] = RIGHT_EYE_TOPBOT.map((i) => lm[i]);
+
+  // Where is the iris within the eye box?  ratio in [0..1].
+  const lxRatio = clamp01((li.x - lCo.x) / (lCi.x - lCo.x));
+  const rxRatio = clamp01((ri.x - rCi.x) / (rCo.x - rCi.x));
+  const lyRatio = clamp01((li.y - lTop.y) / (lBot.y - lTop.y));
+  const ryRatio = clamp01((ri.y - rTop.y) / (rBot.y - rTop.y));
+
+  const gxRatio = (lxRatio + rxRatio) / 2;
+  const gyRatio = (lyRatio + ryRatio) / 2;
+  lastGazeFeat = [gxRatio, gyRatio];
+
+  $("lIris").textContent = `(${li.x.toFixed(3)}, ${li.y.toFixed(3)})`;
+  $("rIris").textContent = `(${ri.x.toFixed(3)}, ${ri.y.toFixed(3)})`;
+  $("gazeRatioX").textContent = gxRatio.toFixed(3);
+  $("gazeRatioY").textContent = gyRatio.toFixed(3);
+
+  // Mapped gaze using current regression
+  const pred = predict(gxRatio, gyRatio);
+  if (pred) {
+    const [px, py] = pred;
+    const dot = $("gazePoint");
+    dot.classList.remove("hidden");
+    dot.style.left = `${px}px`;
+    dot.style.top = `${py}px`;
+    $("predXY").textContent = `(${Math.round(px)}, ${Math.round(py)})`;
+    const onScreen = px >= MARGIN && px <= window.innerWidth - MARGIN
+                  && py >= MARGIN && py <= window.innerHeight - MARGIN;
+    $("onScreen").innerHTML = onScreen ? pill("yes", "ok") : pill("no", "warn");
+  } else {
+    $("gazePoint").classList.add("hidden");
+    $("predXY").textContent = `need ≥5 clicks`;
+    $("onScreen").innerHTML = pill("—", "idle");
+  }
+
+  ctx.restore();
+}
+
+function drawIris(center, sideA, sideB) {
+  const cx = center.x * canvas.width;
+  const cy = center.y * canvas.height;
+  const r = Math.hypot((sideA.x - sideB.x) * canvas.width, (sideA.y - sideB.y) * canvas.height) / 2;
+  ctx.beginPath();
+  ctx.arc(cx, cy, Math.max(3, r), 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = "#7ee2a8";
+  ctx.beginPath();
+  ctx.arc(cx, cy, 2.2, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+
+// ── Click-based linear regression (closed-form least squares) ──────────
+function addCalibrationSample(targetX, targetY) {
+  if (!lastGazeFeat) return false;
+  cal.push({ feat: lastGazeFeat.slice(), target: [targetX, targetY] });
+  $("calCount").textContent = String(cal.length);
+  refitRegression();
+  return true;
+}
+
+function refitRegression() {
+  if (cal.length < 5) { regressionW = null; return; }
+  // X is N×3 with rows [gx, gy, 1]; Y is N×2 with rows [px, py]
+  // Solve W = (Xᵀ X)⁻¹ Xᵀ Y for each output column independently.
+  const N = cal.length;
+  let xx = [[0,0,0],[0,0,0],[0,0,0]]; // 3x3
+  let xtx = [[0,0],[0,0],[0,0]];      // 3x2
+  for (const s of cal) {
+    const [gx, gy] = s.feat;
+    const x = [gx, gy, 1];
+    const [px, py] = s.target;
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) xx[i][j] += x[i] * x[j];
+      xtx[i][0] += x[i] * px;
+      xtx[i][1] += x[i] * py;
+    }
+  }
+  const inv = invert3(xx);
+  if (!inv) { regressionW = null; return; }
+  const W = [[0,0],[0,0],[0,0]];
+  for (let i = 0; i < 3; i++)
+    for (let j = 0; j < 2; j++)
+      for (let k = 0; k < 3; k++) W[i][j] += inv[i][k] * xtx[k][j];
+  regressionW = W;
+  log(`refit regression on ${N} samples`, "ok");
+}
+
+function predict(gx, gy) {
+  if (!regressionW) return null;
+  const x = [gx, gy, 1];
+  let px = 0, py = 0;
+  for (let i = 0; i < 3; i++) { px += x[i] * regressionW[i][0]; py += x[i] * regressionW[i][1]; }
+  return [px, py];
+}
+
+function invert3(m) {
+  const [a,b,c] = m[0], [d,e,f] = m[1], [g,h,i] = m[2];
+  const A =  (e*i - f*h);
+  const B = -(d*i - f*g);
+  const C =  (d*h - e*g);
+  const det = a*A + b*B + c*C;
+  if (Math.abs(det) < 1e-9) return null;
+  const id = 1 / det;
+  return [
+    [ A * id,  -(b*i - c*h) * id,   (b*f - c*e) * id ],
+    [ B * id,   (a*i - c*g) * id,  -(a*f - c*d) * id ],
+    [ C * id,  -(a*h - b*g) * id,   (a*e - b*d) * id ],
+  ];
+}
+
+// ── UI events ───────────────────────────────────────────────────────────
+document.addEventListener("click", (ev) => {
+  // Skip clicks on UI panel
+  if (ev.target.closest("#panel")) return;
+  const added = addCalibrationSample(ev.clientX, ev.clientY);
+  if (added) log(`+cal @ (${ev.clientX}, ${ev.clientY})`);
+});
+
+$("btnReset").addEventListener("click", () => {
+  cal.length = 0;
+  regressionW = null;
+  $("calCount").textContent = "0";
+  $("gazePoint").classList.add("hidden");
+  log("calibration reset", "ok");
+});
+$("btnClear").addEventListener("click", () => { $("log").innerHTML = ""; });
+$("btnCal").addEventListener("click", () => {
+  // Sequence of 9 targets that fade in one at a time; user looks at each + clicks.
+  const xs = [0.1, 0.5, 0.9], ys = [0.1, 0.5, 0.9];
+  const targets = [];
+  xs.forEach((fx) => ys.forEach((fy) => targets.push([fx, fy])));
+  let i = 0;
+  const next = () => {
+    const old = document.querySelector(".bigTarget");
+    if (old) old.remove();
+    if (i >= targets.length) { log("structured calibration done", "ok"); return; }
+    const [fx, fy] = targets[i++];
+    const t = document.createElement("div");
+    t.className = "bigTarget";
+    Object.assign(t.style, {
+      position: "fixed", left: (window.innerWidth * fx) + "px", top: (window.innerHeight * fy) + "px",
+      width: "44px", height: "44px", borderRadius: "50%",
+      background: "#6c5ce7", boxShadow: "0 0 0 6px rgba(108,92,231,0.25)",
+      transform: "translate(-50%, -50%)", cursor: "crosshair", zIndex: 15,
+    });
+    t.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      addCalibrationSample(ev.clientX, ev.clientY);
+      log(`structured cal ${i}/9`);
+      next();
+    });
+    document.body.appendChild(t);
+  };
+  next();
+});
+
+start();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,65 @@
+{
+  "id": "ask-for-help",
+  "title": "Asking for help",
+  "skill_domain": "communication",
+  "difficulty": 1,
+  "thumbnail_url": null,
+  "estimated_minutes": 3,
+  "language": "en",
+  "child_interests": null,
+  "steps": [
+    {
+      "id": "step-1",
+      "order": 1,
+      "teacher_prompt": "You need the crayons but they are too high. What do you say to the teacher?",
+      "scene_image_url": null,
+      "scene_image_prompt": "Hoovy the otter standing on tippy-toes reaching for a crayon box on a high classroom shelf, sunny pastel classroom background",
+      "response_type": "voice_or_choice",
+      "choices": [
+        { "id": "a", "text": "Can you help me, please?", "is_correct": true },
+        { "id": "b", "text": "Give me!", "is_correct": false },
+        { "id": "c", "text": "(say nothing)", "is_correct": false }
+      ],
+      "voice_accepts": ["help", "can you help", "please help", "help me"],
+      "hint_on_wrong": "When you need help, say 'Can you help me, please?'",
+      "hint_image_url": null,
+      "praise_on_correct": "Great asking! That was very polite.",
+      "max_attempts": 3
+    },
+    {
+      "id": "step-2",
+      "order": 2,
+      "teacher_prompt": "The teacher gave you the crayons. What do you say back?",
+      "scene_image_url": null,
+      "scene_image_prompt": "Hoovy the otter holding a box of crayons with a happy smile, teacher kneeling beside him, pastel classroom",
+      "response_type": "voice_or_choice",
+      "choices": [
+        { "id": "a", "text": "Thank you!", "is_correct": true },
+        { "id": "b", "text": "Bye!", "is_correct": false },
+        { "id": "c", "text": "Okay.", "is_correct": false }
+      ],
+      "voice_accepts": ["thank you", "thanks", "thank you very much"],
+      "hint_on_wrong": "When someone helps you, say 'Thank you!'",
+      "hint_image_url": null,
+      "praise_on_correct": "Wonderful manners!",
+      "max_attempts": 3
+    },
+    {
+      "id": "step-3",
+      "order": 3,
+      "teacher_prompt": "You're done with the crayons. What do you say when you give them back?",
+      "scene_image_url": null,
+      "scene_image_prompt": "Hoovy the otter handing a small box of crayons back to a smiling teacher, pastel classroom background",
+      "response_type": "voice_or_choice",
+      "choices": [
+        { "id": "a", "text": "Here you go, thanks!", "is_correct": true },
+        { "id": "b", "text": "Take it.", "is_correct": false },
+        { "id": "c", "text": "(walk away silently)", "is_correct": false }
+      ],
+      "voice_accepts": ["here you go", "here", "thanks", "thank you"],
+      "hint_on_wrong": "Be polite — say 'Here you go, thanks!' when you return something.",
+      "hint_image_url": null,
+      "praise_on_correct": "Perfect! Polite returns make people happy."
+    }
+  ]
+}

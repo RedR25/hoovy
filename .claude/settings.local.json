@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./.venv/Scripts/python.exe -c \"from app.main import app; print\\('OK', [r.path for r in app.routes if hasattr\\(r,'path'\\)][:20]\\)\")"
+    ]
+  }
+}
