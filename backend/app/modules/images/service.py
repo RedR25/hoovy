@@ -73,6 +73,8 @@ def _make_placeholder_png(scenario_id: str, step_id: str, width: int = 512, heig
 
 def _call_gemini_sync(prompt: str, full_prompt: str) -> bytes | None:
     """Blocking Gemini image generation call. Returns PNG bytes or None."""
+    import sys  # noqa: PLC0415
+
     settings = get_settings()
     try:
         from google import genai  # noqa: PLC0415
@@ -104,11 +106,22 @@ def _call_gemini_sync(prompt: str, full_prompt: str) -> bytes | None:
                 # base64 string
                 return base64.b64decode(data)
 
-        logger.warning("Gemini response contained no image parts for prompt: %.80s", prompt)
+        # Loud diagnostic for the demo prep — show the raw response so a misconfigured
+        # model or blocked prompt surfaces immediately instead of silently producing
+        # placeholders. Print to stderr so it appears in the regen script output.
+        msg = f"[gemini] NO IMAGE in response. model={settings.gemini_image_model} prompt={prompt[:80]!r}"
+        print(msg, file=sys.stderr)
+        try:
+            print(f"[gemini] raw response: {resp!r}", file=sys.stderr)
+        except Exception:
+            pass
+        logger.warning(msg)
         return None
 
     except Exception as exc:
-        logger.warning("Gemini image generation failed (%s): %s", type(exc).__name__, exc)
+        msg = f"[gemini] CALL FAILED ({type(exc).__name__}): {exc}"
+        print(msg, file=sys.stderr)
+        logger.warning(msg)
         return None
 
 

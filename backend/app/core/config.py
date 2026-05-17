@@ -7,8 +7,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    # Absolute path to backend/.env so loading works regardless of CWD
+    # (uvicorn runs from `backend/`, but CLI scripts run from repo root).
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(Path(__file__).resolve().parents[2] / ".env"),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -62,10 +64,22 @@ class Settings(BaseSettings):
 
     # Gemini image generation (Nano Banana — Gemini 2.5 Flash Image).
     gemini_api_key: str | None = None
-    gemini_image_model: str = "gemini-2.5-flash-preview-05-20"
+    gemini_image_model: str = "gemini-2.5-flash-image"
     image_style_preset: str = (
-        "kid-friendly cartoon illustration, soft warm pastel colors, simple rounded shapes, "
-        "diverse characters, plain neutral background, no text, no logos, age 6-10 picture-book style"
+        "Soft 3D cartoon rendering in a Pixar-like children's educational app style. "
+        "Bright sky-blue background with a sunny outdoor playground atmosphere. "
+        "Rounded shapes, soft drop shadows, warm sunny lighting, pastel colors. "
+        "Friendly and accessible composition for children with autism — single clear focal subject, "
+        "minimal clutter, no text, no logos, no UI elements, no buttons. "
+        "Include the Hoovy mascot in the scene: Hoovy is a cute round 3D-rendered baby otter "
+        "with soft brown fur, big sparkly black eyes, a tiny pink nose, rosy cheeks, "
+        "small rounded ears, tiny paws, and an open cheerful smile showing a small pink tongue. "
+        "He wears blue denim overalls with a single bright yellow star on the chest, "
+        "and is usually waving one paw. Pixar-style soft shading, glossy highlights on the eyes. "
+        "Keep Hoovy's appearance IDENTICAL across every image — same otter, same overalls, same star. "
+        "Do NOT render Hoovy as a bird, bear, dog, or any other animal — he is always a brown otter. "
+        "Do NOT make it look like a finance app, social media app, or generic game menu — "
+        "it must clearly read as a special-education learning companion app illustration."
     )
 
     @property

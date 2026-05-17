@@ -53,8 +53,6 @@ export interface ScenarioSummary {
 export interface SessionRead {
   id: string;
   scenario_id: string;
-  kid_id: string | null;
-  kid_name: string | null;
   language: string;
   started_at: string;
   ended_at: string | null;

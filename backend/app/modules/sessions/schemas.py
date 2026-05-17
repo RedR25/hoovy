@@ -5,8 +5,6 @@ from pydantic import BaseModel, ConfigDict
 
 class SessionCreate(BaseModel):
     scenario_id: str
-    kid_id: str | None = None
-    kid_name: str | None = None
     language: str = "en"
 
 
@@ -15,8 +13,6 @@ class SessionRead(BaseModel):
 
     id: str
     scenario_id: str
-    kid_id: str | None
-    kid_name: str | None
     language: str
     started_at: datetime
     ended_at: datetime | None

@@ -1,6 +1,5 @@
 import axios, { AxiosError, type AxiosInstance } from "axios";
 import { env } from "@/config/env";
-import { tokenStore } from "@/shared/auth/tokenStore";
 
 export class ApiError extends Error {
   constructor(
@@ -15,12 +14,6 @@ export class ApiError extends Error {
 export const createHttp = (baseURL: string = env.apiBaseUrl): AxiosInstance => {
   const instance = axios.create({ baseURL, withCredentials: false });
 
-  instance.interceptors.request.use((config) => {
-    const token = tokenStore.get();
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-    return config;
-  });
-
   instance.interceptors.response.use(
     (r) => r,
     (error: AxiosError<{ error?: string; detail?: string }>) => {
@@ -28,7 +21,6 @@ export const createHttp = (baseURL: string = env.apiBaseUrl): AxiosInstance => {
       const code = error.response?.data?.error ?? error.code ?? "UNKNOWN";
       const message =
         error.response?.data?.detail ?? error.message ?? "request failed";
-      if (status === 401) tokenStore.clear();
       return Promise.reject(new ApiError(status, code, message));
     },
   );

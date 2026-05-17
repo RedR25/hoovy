@@ -8,10 +8,31 @@
   }
 
   body {
-    @apply bg-hoovy-bg font-friendly min-h-screen m-0;
+    @apply bg-hoovy-cream font-friendly min-h-screen m-0;
   }
 
   #root {
     @apply min-h-screen;
   }
+}
+
+/* WebGazer DOM — kill the camera preview, face overlays, and gaze dot.
+   These get injected by webgazer.begin() before our show*(false) calls
+   can take effect. !important defeats inline styles WebGazer applies. */
+#webgazerVideoContainer,
+#webgazerVideoFeed,
+#webgazerFaceOverlay,
+#webgazerFaceFeedbackBox,
+#webgazerGazeDot,
+video[id^="webgazer"],
+canvas[id^="webgazer"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  pointer-events: none !important;
+  position: fixed !important;
+  top: -9999px !important;
+  left: -9999px !important;
 }

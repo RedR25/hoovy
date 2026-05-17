@@ -28,7 +28,7 @@ def enable_mock_ai(monkeypatch):
 async def _create_session(client) -> str:
     r = await client.post(
         "/api/v1/sessions",
-        json={"scenario_id": "greet-teacher", "kid_name": "Test"},
+        json={"scenario_id": "greet-teacher"},
     )
     assert r.status_code == 201
     return r.json()["id"]

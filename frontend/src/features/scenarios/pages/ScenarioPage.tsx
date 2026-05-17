@@ -2,49 +2,43 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { useScenario } from "@/features/scenarios/hooks";
-import { VirtualTeacher } from "@/features/scenarios/components/VirtualTeacher";
-import { SpeechBubble } from "@/features/scenarios/components/SpeechBubble";
-import { ProgressBar } from "@/features/scenarios/components/ProgressBar";
-import { KidNameModal } from "@/features/scenarios/components/KidNameModal";
-import { ResponseInput } from "@/features/scenarios/components/ResponseInput";
 import { GazeMonitor } from "@/features/scenarios/components/GazeMonitor";
 import { GazePill } from "@/features/scenarios/components/GazePill";
+import { ChoiceTile } from "@/features/scenarios/components/ChoiceTile";
 import { useAudioOut } from "@/features/scenarios/hooks/useAudioOut";
 import { useAudioIn } from "@/features/scenarios/hooks/useAudioIn";
 import { useEvaluate } from "@/features/scenarios/hooks/useEvaluate";
 import { useEvaluateChoice } from "@/features/scenarios/hooks/useEvaluateChoice";
 import { useGaze } from "@/features/scenarios/hooks/useGaze";
-import type { SessionRead, EvaluateResponse } from "@/features/scenarios/types";
+import { SceneBackdrop } from "@/components/ui/SceneBackdrop";
+import { HoovyMascot } from "@/components/ui/HoovyMascot";
+import { StarBar } from "@/components/ui/StarBar";
+import { ScoreBadge } from "@/components/ui/ScoreBadge";
+import { Emoji3D } from "@/components/ui/Emoji3D";
+import type { Emoji3DName } from "@/components/ui/Emoji3D";
+import type { SkillDomain, SessionRead, EvaluateResponse } from "@/features/scenarios/types";
+
+// Visual composition for the scene area when there's no real scene_image_url.
+// Same shape as ScenarioCard's recipe but tuned for the bigger 16:10 panel.
+const SCENE_RECIPE: Record<SkillDomain, { bg: string; props: Emoji3DName[] }> = {
+  communication: { bg: "from-sky-200 via-blue-200 to-indigo-200", props: ["babyGirl", "babyBoy"] },
+  social:        { bg: "from-pink-200 via-rose-200 to-purple-200", props: ["babyGirl", "babyBoy"] },
+  money:         { bg: "from-emerald-200 via-green-200 to-teal-200", props: ["shop", "moneyBag"] },
+  time:          { bg: "from-amber-200 via-orange-200 to-yellow-200", props: ["clock", "sun"] },
+  practical:     { bg: "from-fuchsia-200 via-pink-200 to-rose-200", props: ["house", "tree"] },
+};
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const MIN_BLOB_BYTES = 1024; // blobs smaller than this are "silent"
 
-/**
- * Autism-friendly redirect phrases. Principles:
- *  - Invitations, not commands ("when you're ready" beats "look at me")
- *  - Patient, never urgent
- *  - Joint-attention framing ("the picture", "together")
- *  - Use the child's name when we have it (warm, person-centered)
- *  - No demand for eye contact — "look at the picture", not "look at me"
- *  - Reassurance that the system isn't rushing them
- */
-function buildRedirectPhrase(kidName: string | null): string {
-  const name = kidName && kidName !== "Anonymous" ? kidName : null;
-  const phrases = name
-    ? [
-        `Hi ${name}. I'm right here when you're ready.`,
-        `Take your time, ${name}. The picture is waiting.`,
-        `Whenever you're ready, ${name}.`,
-        `It's okay, ${name}. We can take a little break.`,
-        `${name}, look at the picture when you can.`,
-      ]
-    : [
-        "I'm right here when you're ready.",
-        "Take your time. The picture is waiting.",
-        "Whenever you're ready, friend.",
-        "It's okay. We can take a little break.",
-        "Look at the picture when you can.",
-      ];
+function buildRedirectPhrase(): string {
+  const phrases = [
+    "I'm right here when you're ready.",
+    "Take your time. The picture is waiting.",
+    "Whenever you're ready, friend.",
+    "It's okay. We can take a little break.",
+    "Look at the picture when you can.",
+  ];
   return phrases[Math.floor(Math.random() * phrases.length)];
 }
 
@@ -69,16 +63,13 @@ export function ScenarioPage() {
   const [micEnabled, setMicEnabled] = useState(false);
   const [micUnavailable, setMicUnavailable] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [showNameModal, setShowNameModal] = useState(
-    !localStorage.getItem("hoovy_kid_name"),
-  );
 
   // ── Gaze tracking — always on, no calibration step, no toggle ────────────
   const gazeEnabled = true;
   const redirectCountRef = useRef(0);
   const stepStartRef = useRef(Date.now());
 
-  const { play, playDataUrl, stop, isPlaying, duration, currentTime } = useAudioOut();
+  const { play, playDataUrl, stop, isPlaying } = useAudioOut();
   const { start, stop: stopRec, isRecording, blob, mimeType, error: micError } =
     useAudioIn();
   const { evaluate, isEvaluating: isVoiceEvaluating } = useEvaluate();
@@ -87,10 +78,31 @@ export function ScenarioPage() {
 
   const isEvaluating = isVoiceEvaluating || isChoiceEvaluating;
 
+  // Refs so the gaze callback always sees current playback/eval/record state
+  // without needing to re-subscribe the gaze listener.
+  const isPlayingRef = useRef(false);
+  const isEvaluatingRef = useRef(false);
+  const isRecordingRef = useRef(false);
+  const feedbackRef = useRef<Feedback | null>(null);
+  isPlayingRef.current = isPlaying;
+  isEvaluatingRef.current = isEvaluating;
+  isRecordingRef.current = isRecording;
+  feedbackRef.current = feedback;
+
   const handleAttentionDrop = useCallback(() => {
+    // Never interrupt: Hoovy speaking, backend evaluating, kid recording, or
+    // a feedback chip being shown (advance timer is about to fire).
+    // The gaze loop will retry on the next debounce tick.
+    if (
+      isPlayingRef.current ||
+      isEvaluatingRef.current ||
+      isRecordingRef.current ||
+      feedbackRef.current
+    ) {
+      return;
+    }
     redirectCountRef.current += 1;
-    const kidName = localStorage.getItem("hoovy_kid_name");
-    const phrase = buildRedirectPhrase(kidName);
+    const phrase = buildRedirectPhrase();
     play(phrase);
   }, [play]);
 
@@ -113,15 +125,11 @@ export function ScenarioPage() {
   useEffect(() => {
     if (!scenarioId) return;
 
-    const kidName = localStorage.getItem("hoovy_kid_name") || "Anonymous";
-    const kidId = localStorage.getItem("hoovy.active_kid_id");
     let createdId: string | null = null;
 
     axios
       .post<SessionRead>("/api/v1/sessions", {
         scenario_id: scenarioId,
-        kid_id: kidId,
-        kid_name: kidName,
         language: "en",
       })
       .then((res) => {
@@ -141,7 +149,6 @@ export function ScenarioPage() {
     };
   }, [scenarioId]);
 
-  // ── POST attention log for previous step on step change ──────────────────
   const postAttentionLog = useCallback(
     (stepId: string, onScreenPct: number, offSec: number, redirects: number) => {
       if (!sessionId || !gazeEnabled) return;
@@ -152,14 +159,12 @@ export function ScenarioPage() {
           off_screen_seconds: offSec,
           redirects_triggered: redirects,
         })
-        .catch(() => {}); // fire-and-forget
+        .catch(() => {});
     },
     [sessionId, gazeEnabled],
   );
 
-  // ── Reset per-step state and auto-play teacher prompt ─────────────────────
   useEffect(() => {
-    // Post attention for the step we're leaving (skip first mount)
     if (step?.id && gazeEnabled) {
       const elapsed = (Date.now() - stepStartRef.current) / 1000;
       const presentPct = elapsed > 0
@@ -172,7 +177,6 @@ export function ScenarioPage() {
         redirectCountRef.current,
       );
     }
-    // Reset per-step counters
     redirectCountRef.current = 0;
     stepStartRef.current = Date.now();
 
@@ -190,15 +194,12 @@ export function ScenarioPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, step?.teacher_prompt]);
 
-  // ── Enable mic/choices once teacher audio finishes ────────────────────────
   useEffect(() => {
     if (!isPlaying && !isEvaluating && !feedback) {
       setMicEnabled(true);
     }
   }, [isPlaying, isEvaluating, feedback]);
 
-  // ── AUTO-START recording when teacher finishes speaking ──────────────────
-  // Re-armed on every (currentStep, attempt) so retries also auto-record.
   const autoStartedRef = useRef(false);
   useEffect(() => {
     autoStartedRef.current = false;
@@ -211,7 +212,6 @@ export function ScenarioPage() {
     if (step.response_type === "tap" || step.response_type === "choice") return;
 
     autoStartedRef.current = true;
-    // Brief pause so the kid hears the prompt end before the mic snaps on.
     const t = setTimeout(() => {
       console.log("[hoovy] auto-starting mic");
       start();
@@ -219,16 +219,10 @@ export function ScenarioPage() {
     return () => clearTimeout(t);
   }, [isPlaying, isEvaluating, isRecording, feedback, step, sessionId, micUnavailable, start]);
 
-  // VAD inside useAudioIn now handles auto-stop on silence. No timer here.
-
-  // ── Surface mic permission errors ────────────────────────────────────────
   useEffect(() => {
-    if (micError) {
-      setMicUnavailable(true);
-    }
+    if (micError) setMicUnavailable(true);
   }, [micError]);
 
-  // ── Shared post-evaluate handler ─────────────────────────────────────────
   const handleEvaluateResult = useCallback(
     async (result: EvaluateResponse) => {
       setFeedback({ text: result.feedback, isCorrect: result.is_correct });
@@ -240,7 +234,7 @@ export function ScenarioPage() {
         advanceTimerRef.current = setTimeout(() => {
           const isLast = currentStep === (scenario?.steps.length ?? 1) - 1;
           if (isLast) {
-            navigate("/");
+            navigate("/episodes");
           } else {
             setCurrentStep((s) => s + 1);
           }
@@ -256,7 +250,6 @@ export function ScenarioPage() {
     [currentStep, scenario?.steps.length],
   );
 
-  // ── Submit audio when recording stops and blob is ready ───────────────────
   useEffect(() => {
     if (!blob || !sessionId || !step || isEvaluating) return;
 
@@ -272,7 +265,6 @@ export function ScenarioPage() {
     const run = async () => {
       setMicEnabled(false);
       try {
-        console.log("[hoovy] POST /api/v1/evaluate", { sessionId, stepId: step.id, attempt });
         const result = await evaluate({
           sessionId,
           scenarioId: scenarioId ?? "",
@@ -281,7 +273,6 @@ export function ScenarioPage() {
           blob,
           mimeType,
         });
-        console.log("[hoovy] eval result", result);
         await handleEvaluateResult(result);
       } catch (err) {
         console.error("[hoovy] eval failed", err);
@@ -317,16 +308,8 @@ export function ScenarioPage() {
   );
 
   const handleMicToggle = () => {
-    if (isRecording) {
-      stopRec();
-    } else {
-      start();
-    }
-  };
-
-  const handleNext = () => {
-    stop();
-    setCurrentStep((s) => s + 1);
+    if (isRecording) stopRec();
+    else start();
   };
 
   function showToast(msg: string) {
@@ -334,7 +317,6 @@ export function ScenarioPage() {
     setTimeout(() => setToast(null), 3500);
   }
 
-  // ── Determine effective response type (force choice if mic unavailable) ───
   const effectiveResponseType =
     micUnavailable && step?.response_type === "voice"
       ? "choice"
@@ -345,39 +327,44 @@ export function ScenarioPage() {
   // ── Loading / error states ────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-hoovy-bg flex items-center justify-center font-friendly">
-        <div className="w-12 h-12 rounded-full border-4 border-hoovy-blue border-t-transparent animate-spin" />
-      </div>
+      <SceneBackdrop variant="soft">
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-12 h-12 rounded-full border-4 border-hoovy-blue border-t-transparent animate-spin" />
+        </div>
+      </SceneBackdrop>
     );
   }
 
   if (isError || !scenario || !step) {
     return (
-      <div className="min-h-screen bg-hoovy-bg flex flex-col items-center justify-center gap-4 font-friendly">
-        <p className="text-red-500 font-semibold text-lg">Scenario not found.</p>
-        <button
-          onClick={() => navigate("/")}
-          className="px-6 py-3 bg-hoovy-blue text-white font-bold rounded-2xl hover:bg-blue-500 transition-colors"
-        >
-          Back to Playground
-        </button>
-      </div>
+      <SceneBackdrop variant="soft">
+        <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+          <p className="text-red-500 font-semibold text-lg">Episode not found.</p>
+          <button
+            onClick={() => navigate("/episodes")}
+            className="px-6 py-3 bg-hoovy-blue text-white font-bold rounded-2xl hover:bg-blue-500 transition-colors"
+          >
+            Back to Episodes
+          </button>
+        </div>
+      </SceneBackdrop>
     );
   }
 
-  const isLast = currentStep === scenario.steps.length - 1;
+  const totalSteps = scenario.steps.length;
+  const starsFilled = currentStep + (feedback?.isCorrect ? 1 : 0);
+  const sayLine = step.voice_accepts?.[0] ?? null;
+  const showMic =
+    effectiveResponseType === "voice" || effectiveResponseType === "voice_or_choice";
+  const showChoices =
+    (effectiveResponseType === "choice" || effectiveResponseType === "voice_or_choice") &&
+    (step.choices?.length ?? 0) > 0;
 
   return (
-    <div className="min-h-screen bg-hoovy-bg px-4 py-6 font-friendly flex flex-col max-w-xl mx-auto gap-5">
+    <SceneBackdrop variant="soft">
       {/* Dev gaze HUD */}
       <GazeMonitor facePresent={facePresent} awaySeconds={awaySeconds} />
 
-      {/* Modals */}
-      {showNameModal && (
-        <KidNameModal onConfirm={() => setShowNameModal(false)} />
-      )}
-
-      {/* Mic permission denied modal */}
       {micUnavailable && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full text-center shadow-xl">
@@ -399,141 +386,222 @@ export function ScenarioPage() {
         </div>
       )}
 
-      {/* Toast */}
       {toast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-yellow-100 border border-yellow-300 text-yellow-800 font-semibold text-sm px-5 py-3 rounded-2xl shadow-md max-w-xs text-center">
           {toast}
         </div>
       )}
 
-      {/* Back + title + gaze status */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => navigate("/")}
-          className="text-hoovy-purple font-bold text-sm hover:underline"
-        >
-          Back
-        </button>
-        <h1 className="font-extrabold text-xl text-gray-800 truncate flex-1">
-          {scenario.title}
-        </h1>
-        <GazePill
-          status={gazeStatus}
-          hasSample={gazeHasSample}
-          facePresent={facePresent}
-          awaySeconds={awaySeconds}
-          errorMessage={gazeError}
-        />
-      </div>
-
-      {/* Progress */}
-      <ProgressBar current={currentStep + 1} total={scenario.steps.length} />
-
-      {/* Scene image */}
-      <div
-        className="w-full h-44 rounded-3xl bg-gradient-to-br from-purple-100 to-blue-100 overflow-hidden flex items-center justify-center"
-        style={
-          step.scene_image_url
-            ? {
-                backgroundImage: `url(${step.scene_image_url})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }
-            : undefined
-        }
-      >
-        {!step.scene_image_url && (
-          <span className="text-6xl select-none">🏫</span>
-        )}
-      </div>
-
-      {/* Hint image */}
-      {showHint && step.hint_image_url && (
-        <div className="w-full rounded-2xl overflow-hidden border-2 border-yellow-300">
-          <img src={step.hint_image_url} alt="hint" className="w-full object-cover" />
-        </div>
-      )}
-
-      {/* Teacher + speech bubble */}
-      <div className="flex items-start gap-4">
-        <VirtualTeacher speaking={isPlaying} />
-        <SpeechBubble
-          text={feedback ? feedback.text : step.teacher_prompt}
-          progress={duration > 0 ? currentTime / duration : 0}
-        />
-      </div>
-
-      {/* "Teacher is listening" overlay for response area */}
-      {isEvaluating && (
-        <div className="flex flex-col items-center gap-2 py-4 rounded-2xl bg-purple-50 border border-purple-100">
-          <div className="flex items-center gap-2 text-hoovy-purple font-semibold text-sm animate-pulse">
-            <div className="w-3 h-3 rounded-full bg-hoovy-purple animate-ping" />
-            Teacher is listening...
+      <div className="h-dvh max-w-md mx-auto flex flex-col px-3 pt-3 pb-3 gap-2 overflow-hidden">
+        {/* Header: back / star progress / score */}
+        <header className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => navigate("/episodes")}
+            className="w-11 h-11 rounded-full bg-white border-[4px] border-white shadow-[0_4px_0_rgba(0,0,0,0.1)] flex items-center justify-center text-hoovy-skyDeep active:translate-y-[4px] active:!shadow-none transition-all flex-shrink-0"
+            aria-label="Back"
+          >
+            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+          <div className="flex-1 flex justify-center">
+            <StarBar filled={starsFilled} total={Math.min(5, totalSteps)} size="md" />
           </div>
-        </div>
-      )}
+          <ScoreBadge score={12} />
+        </header>
 
-      {/* Feedback banner */}
-      {feedback && (
-        <div
-          className={[
-            "px-4 py-3 rounded-2xl font-bold text-sm text-center",
-            feedback.isCorrect
-              ? "bg-green-100 text-green-700"
-              : "bg-yellow-100 text-yellow-700",
-          ].join(" ")}
-        >
-          {feedback.isCorrect ? "Great job!" : "Keep trying!"}
-        </div>
-      )}
-
-      {/* Replay */}
-      <div className="flex justify-end">
-        <button
-          onClick={() => play(step.teacher_prompt)}
-          disabled={isPlaying || isRecording || isEvaluating}
-          className="flex items-center gap-1 px-4 py-2 text-sm font-semibold text-hoovy-purple border-2 border-hoovy-purple rounded-xl hover:bg-purple-50 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          Replay
-        </button>
-      </div>
-
-      {/* Response input (voice + choice) */}
-      {!isEvaluating && (
-        <div className="flex flex-col items-center gap-4 w-full">
-          <ResponseInput
-            responseType={effectiveResponseType}
-            choices={step.choices}
-            isRecording={isRecording}
-            isEvaluating={isEvaluating}
-            disabled={!micEnabled || isPlaying}
-            onToggle={handleMicToggle}
-            onChoice={handleChoice}
+        {/* Title + gaze pill */}
+        <div className="flex items-center justify-between flex-shrink-0">
+          <h1 className="font-extrabold text-sm text-hoovy-navy/80 truncate" style={{ fontFamily: 'Fredoka' }}>
+            {scenario.title}
+          </h1>
+          <GazePill
+            status={gazeStatus}
+            hasSample={gazeHasSample}
+            facePresent={facePresent}
+            awaySeconds={awaySeconds}
+            errorMessage={gazeError}
           />
         </div>
-      )}
 
-      {/* Next / Finish (manual fallback for non-voice, non-choice steps e.g. tap) */}
-      {effectiveResponseType === "tap" && (
-        <div className="mt-auto">
-          {isLast ? (
-            <button
-              onClick={() => navigate("/")}
-              className="w-full py-4 bg-hoovy-green text-white font-extrabold text-lg rounded-2xl hover:opacity-90 active:scale-95 transition-all shadow-md"
+        {/* Scene image — flex-1 fills available space, min height keeps mascot visible */}
+        {(() => {
+          const recipe = SCENE_RECIPE[scenario.skill_domain];
+          return (
+            <div
+              className={`relative w-full flex-1 min-h-[160px] rounded-3xl overflow-hidden border-[5px] border-white shadow-[0_6px_0_rgba(0,0,0,0.1),inset_0_6px_15px_rgba(0,0,0,0.15)] ${
+                step.scene_image_url ? "" : `bg-gradient-to-br ${recipe.bg}`
+              }`}
+              style={
+                step.scene_image_url
+                  ? {
+                      backgroundImage: `url(${step.scene_image_url})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                    }
+                  : undefined
+              }
             >
-              Finish!
-            </button>
-          ) : (
-            <button
-              onClick={handleNext}
-              disabled={isPlaying}
-              className="w-full py-4 bg-hoovy-blue text-white font-extrabold text-lg rounded-2xl hover:opacity-90 active:scale-95 transition-all shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              Next
-            </button>
-          )}
+              {!step.scene_image_url && (
+                <>
+                  {/* 3D sun */}
+                  <div
+                    className="absolute top-3 right-4 w-10 h-10 rounded-full"
+                    style={{
+                      background: "linear-gradient(135deg,#FFF599 0%,#FFD833 50%,#FF9800 100%)",
+                      boxShadow: "0 0 20px rgba(255,216,51,0.5), inset -3px -3px 8px #CC7A00",
+                    }}
+                  />
+                  {/* Hill foreground */}
+                  <svg viewBox="0 0 100 50" preserveAspectRatio="none" className="absolute bottom-0 left-0 right-0 w-full h-2/5">
+                    <path d="M0 35 Q25 15 50 30 Q75 45 100 25 L100 50 L0 50 Z" fill="rgba(255,255,255,0.55)" />
+                    <path d="M0 42 Q30 28 60 38 Q85 46 100 36 L100 50 L0 50 Z" fill="rgba(110,205,108,0.6)" />
+                  </svg>
+                  {/* Scene actors */}
+                  {recipe.props[0] && (
+                    <div className="absolute bottom-4 left-6 drop-shadow-[0_4px_4px_rgba(0,0,0,0.2)]">
+                      <Emoji3D name={recipe.props[0]} size={96} />
+                    </div>
+                  )}
+                  {recipe.props[1] && (
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 drop-shadow-[0_4px_4px_rgba(0,0,0,0.2)]">
+                      <Emoji3D name={recipe.props[1]} size={74} />
+                    </div>
+                  )}
+                </>
+              )}
+              {/* Hoovy in the corner */}
+              <div className="absolute bottom-2 right-2 drop-shadow-[0_4px_8px_rgba(0,0,0,0.25)]">
+                <HoovyMascot size={92} speaking={isPlaying} pose="wave" />
+              </div>
+
+              {/* Speech bubble out of Hoovy's mouth — only when there's a say-line */}
+              {sayLine && !feedback && (
+                <div className="absolute bottom-9 right-[100px] max-w-[60%] z-10">
+                  <div className="relative bg-hoovy-yellow rounded-3xl px-4 py-2 border-[4px] border-white shadow-[0_4px_0_#D98A1C] text-center">
+                    {/* Tail — white outer + yellow inner, pointing RIGHT toward Hoovy's mouth */}
+                    <span className="absolute right-[-14px] top-1/2 -translate-y-1/2 w-0 h-0 border-t-[10px] border-t-transparent border-b-[10px] border-b-transparent border-l-[14px] border-l-white" />
+                    <span className="absolute right-[-8px] top-1/2 -translate-y-1/2 w-0 h-0 border-t-[7px] border-t-transparent border-b-[7px] border-b-transparent border-l-[9px] border-l-hoovy-yellow" />
+
+                    <p className="font-extrabold text-hoovy-navy leading-tight whitespace-nowrap">
+                      <span className="text-hoovy-yellowDeep text-xs">Try saying:</span>{" "}
+                      <span className="text-base">"{sayLine}"</span>
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Hint image — small inline */}
+        {showHint && step.hint_image_url && (
+          <div className="w-full max-h-20 rounded-xl overflow-hidden border-[3px] border-hoovy-yellow shadow-[0_3px_0_#D98A1C] flex-shrink-0">
+            <img src={step.hint_image_url} alt="hint" className="w-full h-20 object-cover" />
+          </div>
+        )}
+
+        {/* Speech bubble — 3D, compact */}
+        <div className="relative bg-white rounded-2xl px-3 py-2 flex items-start gap-2 border-[4px] border-hoovy-sky shadow-[0_4px_0_#1C86D9] flex-shrink-0">
+          <span
+            className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-hoovy-sky text-white flex-shrink-0 border-[2px] border-white"
+          >
+            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="white">
+              <path d="M3 10v4a1 1 0 0 0 1 1h3l5 4V5L7 9H4a1 1 0 0 0-1 1z" />
+              <path d="M16 8a4 4 0 0 1 0 8" fill="none" stroke="white" strokeWidth="2" />
+            </svg>
+          </span>
+          <p className="font-extrabold text-hoovy-navy text-sm leading-snug pt-0.5 line-clamp-3">
+            {feedback ? feedback.text : step.teacher_prompt}
+          </p>
         </div>
-      )}
-    </div>
+
+
+        {/* Feedback chip */}
+        {feedback && (
+          <div
+            className={`px-4 py-1.5 rounded-full font-extrabold text-sm text-center self-center border-[3px] border-white flex-shrink-0 ${
+              feedback.isCorrect
+                ? "bg-hoovy-green text-white shadow-[0_3px_0_#2A9038]"
+                : "bg-hoovy-yellow text-hoovy-navy shadow-[0_3px_0_#D98A1C]"
+            }`}
+          >
+            {feedback.isCorrect ? "Great job!" : "Keep trying!"}
+          </div>
+        )}
+
+        {/* Choice tiles — horizontal scroll, fixed height */}
+        {showChoices && !isEvaluating && (
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-3 px-3 flex-shrink-0">
+            {step.choices.map((choice) => (
+              <ChoiceTile
+                key={choice.id}
+                choice={choice}
+                disabled={!micEnabled || isPlaying || isEvaluating}
+                onSelect={handleChoice}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Evaluating indicator */}
+        {isEvaluating && (
+          <div className="flex items-center justify-center gap-2 py-2 rounded-full bg-hoovy-purple/15 border-[3px] border-hoovy-purple text-hoovy-purple font-extrabold text-xs flex-shrink-0">
+            <div className="w-2.5 h-2.5 rounded-full bg-hoovy-purple animate-ping" />
+            Teacher is listening...
+          </div>
+        )}
+
+        {/* "I want to say it!" mic button — 3D green, compact */}
+        {showMic && !isEvaluating && (
+          <button
+            onClick={handleMicToggle}
+            disabled={!micEnabled || isPlaying}
+            className={[
+              "w-full rounded-full py-3 px-4 font-extrabold text-base text-white flex-shrink-0",
+              "border-[4px] border-white transition-all duration-100",
+              "flex items-center justify-center gap-2",
+              "active:translate-y-[5px] active:!shadow-none",
+              isRecording
+                ? "bg-hoovy-pink shadow-[0_5px_0_#D93D55] animate-pulse"
+                : "bg-hoovy-green shadow-[0_5px_0_#2A9038]",
+              (!micEnabled || isPlaying) ? "opacity-50 cursor-not-allowed" : "",
+            ].join(" ")}
+          >
+            <span
+              className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white/25 border-[2px] border-white/50"
+            >
+              {isRecording ? (
+                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="white">
+                  <rect x="6" y="6" width="12" height="12" rx="2" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="white">
+                  <rect x="9" y="3" width="6" height="12" rx="3" />
+                  <path d="M5 11v1a7 7 0 0 0 14 0v-1" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                  <line x1="12" y1="19" x2="12" y2="22" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              )}
+            </span>
+            {isRecording ? "Tap to stop" : "I want to say it!"}
+          </button>
+        )}
+
+        {/* Tap-only fallback */}
+        {effectiveResponseType === "tap" && (
+          <button
+            onClick={() => {
+              const isLast = currentStep === scenario.steps.length - 1;
+              if (isLast) navigate("/episodes");
+              else setCurrentStep((s) => s + 1);
+            }}
+            disabled={isPlaying}
+            className="w-full py-3 bg-hoovy-sky text-white font-extrabold text-base rounded-full border-[4px] border-white shadow-[0_5px_0_#1C86D9] active:translate-y-[5px] active:!shadow-none transition-all disabled:opacity-60 disabled:cursor-not-allowed flex-shrink-0"
+          >
+            {currentStep === scenario.steps.length - 1 ? "Finish!" : "Next"}
+          </button>
+        )}
+      </div>
+    </SceneBackdrop>
   );
 }

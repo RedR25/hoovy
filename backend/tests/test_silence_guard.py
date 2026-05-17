@@ -91,7 +91,7 @@ async def test_silent_clip_short_circuits_evaluate(monkeypatch, client):
     session = (
         await client.post(
             "/api/v1/sessions",
-            json={"scenario_id": "greet-teacher", "kid_name": "T", "language": "en"},
+            json={"scenario_id": "greet-teacher", "language": "en"},
         )
     ).json()
 
@@ -143,7 +143,7 @@ async def test_tone_clip_does_reach_gemma(monkeypatch, client):
     session = (
         await client.post(
             "/api/v1/sessions",
-            json={"scenario_id": "greet-teacher", "kid_name": "T", "language": "en"},
+            json={"scenario_id": "greet-teacher", "language": "en"},
         )
     ).json()
 
@@ -183,7 +183,7 @@ async def test_gemma_hallucinated_correct_on_empty_transcript_is_overridden(monk
     session = (
         await client.post(
             "/api/v1/sessions",
-            json={"scenario_id": "greet-teacher", "kid_name": "T", "language": "en"},
+            json={"scenario_id": "greet-teacher", "language": "en"},
         )
     ).json()
 

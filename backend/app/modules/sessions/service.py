@@ -21,14 +21,10 @@ class SessionService(BaseService):
     async def create(
         self,
         scenario_id: str,
-        kid_name: str | None,
         language: str,
-        kid_id: str | None = None,
     ) -> Session:
         session = Session(
             scenario_id=scenario_id,
-            kid_id=kid_id,
-            kid_name=kid_name,
             language=language,
         )
         return await self.session_repo.add(session)

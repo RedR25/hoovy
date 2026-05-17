@@ -1,8 +1,13 @@
 import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useDraftScenario, usePublishScenario } from "../hooks";
 import type { AuthorRequest, Complexity, SkillDomain } from "../types";
 import type { Scenario } from "@/features/scenarios/types";
+import { SceneBackdrop } from "@/components/ui/SceneBackdrop";
+import { BottomNav } from "@/components/ui/BottomNav";
+import { Hoovy3DButton } from "@/components/ui/Hoovy3DButton";
+import { Emoji3D } from "@/components/ui/Emoji3D";
+import { HoovyMascot } from "@/components/ui/HoovyMascot";
 
 const SKILL_DOMAINS: SkillDomain[] = [
   "communication",
@@ -13,152 +18,173 @@ const SKILL_DOMAINS: SkillDomain[] = [
 ];
 
 const COMPLEXITY_LEVELS: { value: Complexity; label: string; description: string }[] = [
-  { value: "low", label: "Low", description: "Short, very explicit" },
-  { value: "med", label: "Med", description: "Balanced" },
-  { value: "high", label: "High", description: "Multi-step, subtle cues" },
+  { value: "low",  label: "Low",    description: "Short, very explicit" },
+  { value: "med",  label: "Medium", description: "Balanced" },
+  { value: "high", label: "High",   description: "Multi-step, subtle cues" },
 ];
-
-function AdminGate() {
-  return (
-    <div className="min-h-screen bg-hoovy-bg flex items-center justify-center p-8">
-      <div className="bg-white rounded-3xl shadow-lg p-10 max-w-md text-center">
-        <div className="text-6xl mb-4">🔒</div>
-        <h1 className="text-2xl font-extrabold text-gray-800 mb-2">Parents Only</h1>
-        <p className="text-gray-500 mb-6">
-          This page is for parents and teachers. Add <code className="bg-gray-100 px-1 rounded">?admin=1</code> to the URL to continue.
-        </p>
-        <a
-          href="/"
-          className="inline-block bg-hoovy-blue text-white font-bold px-6 py-3 rounded-2xl hover:opacity-90 transition-opacity"
-        >
-          Back to Playground
-        </a>
-      </div>
-    </div>
-  );
-}
 
 interface DraftPreviewProps {
   scenario: Scenario;
-  onPlay: () => void;
+  onEdit: () => void;
   onPublish: () => void;
-  onDiscard: () => void;
   publishing: boolean;
   publishError: string | null;
 }
 
-function DraftPreview({ scenario, onPlay, onPublish, onDiscard, publishing, publishError }: DraftPreviewProps) {
+function DraftPreview({ scenario, onEdit, onPublish, publishing, publishError }: DraftPreviewProps) {
   const firstStep = scenario.steps[0];
 
   return (
-    <div className="mt-8 flex flex-col gap-5">
-      <div className="bg-white rounded-3xl shadow-md overflow-hidden">
-        <div className="px-6 py-4 bg-gradient-to-r from-hoovy-blue to-hoovy-purple text-white flex items-center justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase opacity-80">Draft</p>
-            <h2 className="text-xl font-extrabold">{scenario.title}</h2>
-          </div>
-          <span className="text-xs font-bold bg-white/20 px-3 py-1 rounded-full">Ready</span>
+    <div className="bg-hoovy-cream rounded-3xl p-5 border-[5px] border-white shadow-[0_8px_0_rgba(0,0,0,0.06)] flex flex-col gap-4 h-full">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-lg font-extrabold text-hoovy-navy truncate" style={{ fontFamily: "Fredoka" }}>
+          Draft: {scenario.title}
+        </h2>
+        <span className="text-[10px] font-extrabold text-white bg-hoovy-green px-3 py-1.5 rounded-full border-[3px] border-white shadow-[0_3px_0_#2A9038] uppercase tracking-wide">
+          Ready
+        </span>
+      </div>
+
+      <div className="bg-white rounded-2xl p-4 flex gap-3 items-start border-[3px] border-hoovy-sky/30">
+        <div className="w-9 h-9 rounded-full bg-hoovy-sky flex items-center justify-center flex-shrink-0 border-[3px] border-white shadow-[0_3px_0_#1C86D9]">
+          <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H2z" />
+            <path d="M22 4h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z" />
+          </svg>
         </div>
-
-        <div className="p-6 flex flex-col gap-5">
-          <div>
-            <p className="text-xs font-bold text-gray-400 uppercase mb-1">Context</p>
-            <p className="text-gray-700">
-              {scenario.steps.length} step{scenario.steps.length === 1 ? "" : "s"} ·{" "}
-              {scenario.skill_domain} · difficulty {scenario.difficulty}/3
-              {scenario.child_interests && (
-                <>
-                  {" · themed around "}
-                  <span className="font-bold text-hoovy-blue">{scenario.child_interests}</span>
-                </>
-              )}
-            </p>
-          </div>
-
-          {firstStep && (
-            <div>
-              <p className="text-xs font-bold text-gray-400 uppercase mb-1">Hoovy's First Line</p>
-              <p className="text-gray-800 italic">"{firstStep.teacher_prompt}"</p>
-            </div>
-          )}
-
-          <div>
-            <p className="text-xs font-bold text-gray-400 uppercase mb-2">All Steps</p>
-            <ol className="flex flex-col gap-2">
-              {scenario.steps.map((step) => (
-                <li key={step.id} className="flex gap-3 items-start">
-                  <span className="bg-hoovy-blue text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0">
-                    {step.order}
-                  </span>
-                  <span className="text-sm text-gray-700">{step.teacher_prompt}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
-
-          <div className="text-xs text-gray-400">
-            Voice and images will be generated automatically when you publish.
-          </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-extrabold text-hoovy-navy mb-1">Context</p>
+          <p className="text-sm text-hoovy-navy/80 leading-snug">
+            {scenario.steps.length} step{scenario.steps.length === 1 ? "" : "s"} · {scenario.skill_domain} · difficulty {scenario.difficulty}/3
+            {scenario.child_interests && (
+              <> · themed around <span className="font-bold text-hoovy-skyDeep">{scenario.child_interests}</span></>
+            )}
+          </p>
         </div>
       </div>
 
+      {firstStep && (
+        <div className="bg-white rounded-2xl p-4 flex gap-3 items-start border-[3px] border-hoovy-yellow/40">
+          <div className="w-9 h-9 rounded-full bg-hoovy-yellow flex items-center justify-center flex-shrink-0 border-[3px] border-white shadow-[0_3px_0_#D98A1C]">
+            <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-extrabold text-hoovy-navy mb-1">Hoovy's Line</p>
+            <p className="text-sm text-hoovy-navy/80 italic leading-snug">"{firstStep.teacher_prompt}"</p>
+          </div>
+        </div>
+      )}
+
+      {scenario.steps.length > 1 && (
+        <details className="bg-white/70 rounded-2xl p-3 border-[3px] border-hoovy-navy/10">
+          <summary className="text-xs font-extrabold text-hoovy-navy cursor-pointer">
+            All {scenario.steps.length} steps
+          </summary>
+          <ol className="mt-3 flex flex-col gap-2">
+            {scenario.steps.map((step) => (
+              <li key={step.id} className="flex gap-2 items-start">
+                <span className="bg-hoovy-sky text-white text-[10px] font-extrabold w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">{step.order}</span>
+                <span className="text-xs text-hoovy-navy/80">{step.teacher_prompt}</span>
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
+
       {publishError && (
-        <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-4 text-red-700 text-sm">
+        <div className="bg-hoovy-pink/10 border-[3px] border-hoovy-pink rounded-2xl p-3 text-hoovy-pinkDeep text-xs font-bold">
           {publishError}
         </div>
       )}
 
-      <div className="flex gap-3">
+      <div className="flex-1" />
+
+      <div className="flex items-center justify-end gap-3 pt-1">
         <button
-          onClick={onPlay}
-          className="flex-1 bg-white border-2 border-gray-200 text-gray-700 font-bold py-4 rounded-2xl hover:border-hoovy-blue transition-colors"
+          onClick={onEdit}
+          className="px-5 py-2.5 rounded-full bg-white text-hoovy-navy font-extrabold text-sm border-[3px] border-hoovy-navy/15 shadow-[0_3px_0_rgba(0,0,0,0.1)] active:translate-y-[3px] active:!shadow-none transition-all"
         >
-          Preview
+          Edit
         </button>
         <button
           onClick={onPublish}
           disabled={publishing}
-          className="flex-[2] bg-hoovy-blue text-white font-extrabold py-4 rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-50"
+          className="px-5 py-2.5 rounded-full bg-hoovy-navy text-white font-extrabold text-sm border-[3px] border-hoovy-navy shadow-[0_4px_0_#0F1A2B] active:translate-y-[4px] active:!shadow-none transition-all disabled:opacity-50"
         >
-          {publishing ? "Publishing..." : "Publish for all kids"}
+          {publishing ? "Publishing..." : "Save & Publish"}
         </button>
       </div>
-
-      <button
-        onClick={onDiscard}
-        className="text-sm text-gray-400 hover:text-gray-600 underline"
-      >
-        Discard draft and start over
-      </button>
     </div>
   );
 }
 
-export function AuthorPage() {
-  const [searchParams] = useSearchParams();
+function EmptyDraftSlot({ isPending, isError, errorMessage, onRetry }: {
+  isPending: boolean;
+  isError: boolean;
+  errorMessage?: string | null;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="bg-hoovy-cream rounded-3xl p-6 border-[5px] border-white shadow-[0_8px_0_rgba(0,0,0,0.06)] h-full flex flex-col items-center justify-center text-center gap-4 min-h-[420px]">
+      {isPending ? (
+        <>
+          <HoovyMascot size={120} speaking pose="cheer" />
+          <p className="font-extrabold text-hoovy-navy text-lg" style={{ fontFamily: "Fredoka" }}>Cooking up a draft...</p>
+          <div className="flex gap-1.5">
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className="w-2.5 h-2.5 rounded-full bg-hoovy-sky animate-bounce"
+                style={{ animationDelay: `${i * 0.15}s` }}
+              />
+            ))}
+          </div>
+        </>
+      ) : isError ? (
+        <>
+          <div className="text-5xl">😔</div>
+          <p className="font-extrabold text-hoovy-navy" style={{ fontFamily: "Fredoka" }}>Draft failed</p>
+          <p className="text-xs text-hoovy-pinkDeep font-bold max-w-xs">{errorMessage ?? "Something went wrong."}</p>
+          <Hoovy3DButton variant="pink" size="sm" onClick={onRetry}>Try again</Hoovy3DButton>
+        </>
+      ) : (
+        <>
+          <HoovyMascot size={140} speaking />
+          <p className="font-extrabold text-hoovy-navy text-base" style={{ fontFamily: "Fredoka" }}>
+            Draft will appear here
+          </p>
+          <p className="text-xs text-hoovy-navy/60 font-bold max-w-xs">
+            Fill the left panel and tap <span className="text-hoovy-skyDeep">Generate</span> to build a new learning module.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+function AuthorContent() {
   const navigate = useNavigate();
-
-  if (searchParams.get("admin") !== "1") {
-    return <AdminGate />;
-  }
-
   const [form, setForm] = useState<AuthorRequest>({
-    skill_target: "",
-    child_interests: "",
-    complexity: "med",
+    skill_target: "Going to the grocery store",
+    child_interests: "Trains",
+    complexity: "low",
     skill_domain: "communication",
     num_steps: 3,
   });
 
   const draftMutation = useDraftScenario();
   const publishMutation = usePublishScenario();
-
   const draft = draftMutation.data;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.skill_target.trim() || !form.child_interests.trim()) return;
+  const canGenerate =
+    !draftMutation.isPending &&
+    form.skill_target.trim().length >= 3 &&
+    form.child_interests.trim().length >= 1;
+
+  const handleGenerate = () => {
+    if (!canGenerate) return;
     publishMutation.reset();
     draftMutation.mutate(form);
   };
@@ -167,191 +193,186 @@ export function AuthorPage() {
     if (!draft) return;
     publishMutation.mutate(
       { draft_id: draft.draft_id },
-      {
-        onSuccess: (scenario) => {
-          navigate(`/scenario/${scenario.id}`);
-        },
-      },
+      { onSuccess: (scenario) => navigate(`/scenario/${scenario.id}`) },
     );
   };
 
-  const handleDiscard = () => {
+  const handleEdit = () => {
     draftMutation.reset();
     publishMutation.reset();
   };
 
-  const handlePreview = () => {
-    // For now, "Preview" means re-render the draft card. A true preview
-    // (running the scenario engine against the in-memory draft) is a v2.
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
   return (
-    <div className="min-h-screen bg-hoovy-bg p-6 md:p-10">
-      <div className="max-w-2xl mx-auto">
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <span className="text-4xl">🎨</span>
-            <h1 className="text-3xl font-extrabold text-gray-800">Scenario Builder</h1>
+    <SceneBackdrop variant="playground">
+      <div className="min-h-dvh flex flex-col">
+        {/* Header card */}
+        <header className="px-4 pt-4 max-w-5xl w-full mx-auto">
+          <div className="bg-white rounded-3xl px-5 py-4 flex items-center gap-4 border-[5px] border-white shadow-[0_6px_0_rgba(0,0,0,0.08)]">
+            <button
+              onClick={() => navigate("/episodes")}
+              className="w-11 h-11 rounded-full bg-hoovy-purple flex items-center justify-center text-white border-[3px] border-white shadow-[0_4px_0_#8A4FCC] active:translate-y-[4px] active:!shadow-none transition-all flex-shrink-0"
+              aria-label="Back"
+              title="Back to Episodes"
+            >
+              <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </button>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl font-extrabold text-hoovy-navy leading-tight" style={{ fontFamily: "Fredoka" }}>
+                Scenario Builder
+              </h1>
+              <p className="text-xs font-extrabold text-hoovy-navy/55">Create new learning modules.</p>
+            </div>
+            <Hoovy3DButton
+              variant="blue"
+              size="md"
+              onClick={handleGenerate}
+              disabled={!canGenerate}
+              className="flex-shrink-0"
+            >
+              <span className="inline-flex items-center gap-2">
+                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 11l3-8 3 8 8 3-8 3-3 8-3-8-8-3z" />
+                </svg>
+                {draftMutation.isPending ? "Generating..." : "Generate"}
+              </span>
+            </Hoovy3DButton>
           </div>
-          <p className="text-gray-500">
-            Tell Hoovy what to teach and what your child loves. We'll build the scenario.
-          </p>
-        </div>
+        </header>
 
-        {!draft && (
-          <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-md p-7 flex flex-col gap-6">
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">Skill Target</label>
-              <input
-                type="text"
-                value={form.skill_target}
-                onChange={(e) => setForm((f) => ({ ...f, skill_target: e.target.value }))}
-                placeholder="e.g. Going to the grocery store"
-                className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-gray-800 focus:outline-none focus:border-hoovy-blue"
-                required
-                minLength={3}
-                maxLength={200}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">Child's Interests</label>
-              <input
-                type="text"
-                value={form.child_interests}
-                onChange={(e) => setForm((f) => ({ ...f, child_interests: e.target.value }))}
-                placeholder="e.g. Trains, Dinosaurs, Princesses"
-                className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-gray-800 focus:outline-none focus:border-hoovy-blue"
-                required
-                minLength={1}
-                maxLength={200}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">Complexity Level</label>
-              <div className="grid grid-cols-3 gap-2">
-                {COMPLEXITY_LEVELS.map((c) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, complexity: c.value }))}
-                    className={`py-3 rounded-2xl font-bold border-2 transition-colors text-sm ${
-                      form.complexity === c.value
-                        ? "bg-hoovy-blue text-white border-hoovy-blue"
-                        : "bg-white text-gray-600 border-gray-200 hover:border-hoovy-blue"
-                    }`}
-                  >
-                    {c.label}
-                  </button>
-                ))}
+        {/* Two-column body */}
+        <main className="flex-1 px-4 pt-4 pb-28 max-w-5xl w-full mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* LEFT: AI Prompt */}
+            <section className="bg-white rounded-3xl p-5 border-[5px] border-white shadow-[0_8px_0_rgba(0,0,0,0.06)] flex flex-col gap-4">
+              <div className="flex items-center gap-2">
+                <Emoji3D name="sparkles" size={22} />
+                <h2 className="text-lg font-extrabold text-hoovy-navy" style={{ fontFamily: "Fredoka" }}>AI Prompt</h2>
               </div>
-              <p className="text-xs text-gray-400 mt-1">
-                {COMPLEXITY_LEVELS.find((c) => c.value === form.complexity)?.description}
-              </p>
-            </div>
 
-            <details className="text-sm">
-              <summary className="cursor-pointer text-gray-500 font-bold">Advanced options</summary>
-              <div className="mt-4 flex flex-col gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">Skill Domain</label>
-                  <select
-                    value={form.skill_domain}
-                    onChange={(e) => setForm((f) => ({ ...f, skill_domain: e.target.value as SkillDomain }))}
-                    className="w-full border-2 border-gray-200 rounded-2xl px-4 py-2 capitalize"
-                  >
-                    {SKILL_DOMAINS.map((d) => (
-                      <option key={d} value={d}>
-                        {d}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">
-                    Number of Steps: <span className="text-hoovy-blue">{form.num_steps}</span>
-                  </label>
+              <div>
+                <label className="block text-xs font-extrabold text-hoovy-navy mb-1.5">Skill Target</label>
+                <div className="relative">
                   <input
-                    type="range"
-                    min={1}
-                    max={5}
-                    step={1}
-                    value={form.num_steps}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, num_steps: Number(e.target.value) as 1 | 2 | 3 | 4 | 5 }))
-                    }
-                    className="w-full accent-hoovy-blue"
+                    type="text"
+                    value={form.skill_target}
+                    onChange={(e) => setForm((f) => ({ ...f, skill_target: e.target.value }))}
+                    placeholder="e.g. Going to the grocery store"
+                    className="w-full bg-white border-[3px] border-hoovy-navy/15 rounded-full px-4 py-2.5 pr-10 text-sm font-bold text-hoovy-navy placeholder:text-hoovy-navy/30 focus:outline-none focus:border-hoovy-sky transition-colors"
+                    minLength={3}
+                    maxLength={200}
                   />
+                  <svg viewBox="0 0 24 24" className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-hoovy-navy/40 pointer-events-none" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
                 </div>
               </div>
-            </details>
 
-            <button
-              type="submit"
-              disabled={
-                draftMutation.isPending ||
-                !form.skill_target.trim() ||
-                !form.child_interests.trim()
-              }
-              className="w-full bg-hoovy-blue text-white font-extrabold py-4 rounded-2xl text-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {draftMutation.isPending ? "Building draft..." : "Build Draft"}
-            </button>
-          </form>
-        )}
-
-        {draftMutation.isPending && (
-          <div className="mt-8 bg-white rounded-3xl shadow-md p-8 flex flex-col items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-hoovy-blue to-hoovy-purple flex items-center justify-center animate-bounce text-3xl">
-              🤖
-            </div>
-            <div className="text-center">
-              <p className="font-extrabold text-gray-800 text-lg">Cooking up a draft...</p>
-              <p className="text-gray-500 text-sm mt-1">
-                Hoovy is thinking. This may take up to 60 seconds.
-              </p>
-            </div>
-            <div className="flex gap-1">
-              {[0, 1, 2].map((i) => (
-                <span
-                  key={i}
-                  className="w-2 h-2 rounded-full bg-hoovy-blue animate-bounce"
-                  style={{ animationDelay: `${i * 0.15}s` }}
+              <div>
+                <label className="block text-xs font-extrabold text-hoovy-navy mb-1.5">Child's Interests</label>
+                <input
+                  type="text"
+                  value={form.child_interests}
+                  onChange={(e) => setForm((f) => ({ ...f, child_interests: e.target.value }))}
+                  placeholder="e.g. Trains, Dinosaurs, Princesses"
+                  className="w-full bg-white border-[3px] border-hoovy-navy/15 rounded-full px-4 py-2.5 text-sm font-bold text-hoovy-navy placeholder:text-hoovy-navy/30 focus:outline-none focus:border-hoovy-sky transition-colors"
+                  minLength={1}
+                  maxLength={200}
                 />
-              ))}
-            </div>
-          </div>
-        )}
+              </div>
 
-        {draftMutation.isError && (
-          <div className="mt-8 bg-white rounded-3xl shadow-md p-7 border-2 border-red-200">
-            <div className="text-4xl mb-3">😔</div>
-            <h2 className="font-extrabold text-gray-800 text-lg mb-1">Draft failed</h2>
-            <p className="text-red-600 text-sm mb-4">
-              {draftMutation.error?.message ?? "Something went wrong. Try again."}
-            </p>
-            <button
-              onClick={() => draftMutation.reset()}
-              className="bg-hoovy-blue text-white font-bold px-6 py-3 rounded-2xl hover:opacity-90 transition-opacity"
-            >
-              Try Again
-            </button>
-          </div>
-        )}
+              <div>
+                <label className="block text-xs font-extrabold text-hoovy-navy mb-1.5">Complexity Level</label>
+                <div className="flex gap-2">
+                  {COMPLEXITY_LEVELS.map((c) => {
+                    const active = form.complexity === c.value;
+                    return (
+                      <button
+                        key={c.value}
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, complexity: c.value }))}
+                        className={[
+                          "flex-1 py-2 rounded-full font-extrabold text-sm border-[3px] transition-all",
+                          "active:translate-y-[3px] active:!shadow-none",
+                          active
+                            ? "bg-hoovy-green text-white border-white shadow-[0_4px_0_#2A9038]"
+                            : "bg-white text-hoovy-navy/60 border-hoovy-navy/10 shadow-[0_3px_0_rgba(0,0,0,0.06)] hover:text-hoovy-navy",
+                        ].join(" ")}
+                      >
+                        {c.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-        {draft && (
-          <DraftPreview
-            scenario={draft.scenario}
-            onPlay={handlePreview}
-            onPublish={handlePublish}
-            onDiscard={handleDiscard}
-            publishing={publishMutation.isPending}
-            publishError={publishMutation.error?.message ?? null}
-          />
-        )}
+              <details className="text-sm mt-1">
+                <summary className="cursor-pointer text-xs font-extrabold text-hoovy-navy/60 hover:text-hoovy-navy">
+                  Advanced options
+                </summary>
+                <div className="mt-3 flex flex-col gap-3">
+                  <div>
+                    <label className="block text-[11px] font-extrabold text-hoovy-navy/70 mb-1">Skill Domain</label>
+                    <select
+                      value={form.skill_domain}
+                      onChange={(e) => setForm((f) => ({ ...f, skill_domain: e.target.value as SkillDomain }))}
+                      className="w-full bg-white border-[3px] border-hoovy-navy/15 rounded-full px-4 py-2 text-sm font-bold text-hoovy-navy capitalize focus:outline-none focus:border-hoovy-sky"
+                    >
+                      {SKILL_DOMAINS.map((d) => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-extrabold text-hoovy-navy/70 mb-1">
+                      Number of Steps: <span className="text-hoovy-skyDeep">{form.num_steps}</span>
+                    </label>
+                    <input
+                      type="range"
+                      min={1}
+                      max={5}
+                      step={1}
+                      value={form.num_steps}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, num_steps: Number(e.target.value) as 1 | 2 | 3 | 4 | 5 }))
+                      }
+                      className="w-full accent-hoovy-sky"
+                    />
+                  </div>
+                </div>
+              </details>
+            </section>
+
+            {/* RIGHT: Draft Preview */}
+            <section>
+              {draft ? (
+                <DraftPreview
+                  scenario={draft.scenario}
+                  onEdit={handleEdit}
+                  onPublish={handlePublish}
+                  publishing={publishMutation.isPending}
+                  publishError={publishMutation.error?.message ?? null}
+                />
+              ) : (
+                <EmptyDraftSlot
+                  isPending={draftMutation.isPending}
+                  isError={draftMutation.isError}
+                  errorMessage={draftMutation.error?.message}
+                  onRetry={() => draftMutation.reset()}
+                />
+              )}
+            </section>
+          </div>
+        </main>
+
+        <BottomNav />
       </div>
-    </div>
+    </SceneBackdrop>
   );
+}
+
+export function AuthorPage() {
+  return <AuthorContent />;
 }

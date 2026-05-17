@@ -11,12 +11,11 @@ async def test_create_session(client, monkeypatch):
 
     resp = await client.post(
         "/api/v1/sessions",
-        json={"scenario_id": "greet-teacher", "kid_name": "Khang", "language": "en"},
+        json={"scenario_id": "greet-teacher", "language": "en"},
     )
     assert resp.status_code == 201
     data = resp.json()
     assert data["scenario_id"] == "greet-teacher"
-    assert data["kid_name"] == "Khang"
     assert data["ended_at"] is None
 
 

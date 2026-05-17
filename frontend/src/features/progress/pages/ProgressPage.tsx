@@ -1,298 +1,164 @@
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/features/auth/AuthProvider";
-import { useActiveKid, useMyKids } from "@/features/kids/hooks";
+import { SceneBackdrop } from "@/components/ui/SceneBackdrop";
+import { HoovyMascot } from "@/components/ui/HoovyMascot";
+import { BottomNav } from "@/components/ui/BottomNav";
+import { ScoreBadge } from "@/components/ui/ScoreBadge";
+import { Emoji3D } from "@/components/ui/Emoji3D";
+import type { Emoji3DName } from "@/components/ui/Emoji3D";
 
-// ---------------------------------------------------------------------------
-// Mocked progress data. Backend aggregation endpoint is a v2; this is UI only.
-// ---------------------------------------------------------------------------
-
-interface DomainProgress {
-  domain: "communication" | "money" | "time" | "social" | "practical";
-  attempted: number;
-  correct: number;
+interface SkillFocus {
+  name: string;
+  pct: number;
+  color: string;
+  trackBorder: string;
 }
 
-interface SessionSummary {
-  scenario_title: string;
-  date: string;
-  accuracy: number;
-  steps_done: number;
-  total_steps: number;
-}
-
-interface MockKidProgress {
-  sessions_total: number;
-  scenarios_completed: number;
-  streak_days: number;
-  avg_attempts_to_correct: number;
-  domains: DomainProgress[];
-  recent: SessionSummary[];
-  weekly_minutes: number[]; // last 7 days
-}
-
-const MOCK_PROGRESS: MockKidProgress = {
-  sessions_total: 23,
-  scenarios_completed: 11,
-  streak_days: 4,
-  avg_attempts_to_correct: 1.4,
-  domains: [
-    { domain: "communication", attempted: 28, correct: 23 },
-    { domain: "social", attempted: 14, correct: 11 },
-    { domain: "money", attempted: 9, correct: 6 },
-    { domain: "time", attempted: 4, correct: 3 },
-    { domain: "practical", attempted: 6, correct: 4 },
-  ],
-  recent: [
-    { scenario_title: "Greeting the teacher", date: "Today", accuracy: 1.0, steps_done: 3, total_steps: 3 },
-    { scenario_title: "Train Station Visit", date: "Yesterday", accuracy: 0.67, steps_done: 3, total_steps: 3 },
-    { scenario_title: "Buying juice at the shop", date: "2 days ago", accuracy: 1.0, steps_done: 2, total_steps: 2 },
-    { scenario_title: "Asking for help politely", date: "3 days ago", accuracy: 0.5, steps_done: 2, total_steps: 2 },
-    { scenario_title: "Saying goodbye to grandma", date: "4 days ago", accuracy: 1.0, steps_done: 3, total_steps: 3 },
-  ],
-  weekly_minutes: [6, 8, 0, 12, 5, 9, 7],
+const MOCK = {
+  activities_completed: 24,
+  stars_earned: 48,
+  time_spent: "3h 25m",
+  skill_focus: [
+    { name: "Communication",        pct: 75, color: "bg-hoovy-purple", trackBorder: "border-hoovy-purple" },
+    { name: "Social Interaction",   pct: 60, color: "bg-hoovy-pink",   trackBorder: "border-hoovy-pink" },
+    { name: "Emotional Regulation", pct: 80, color: "bg-hoovy-green",  trackBorder: "border-hoovy-green" },
+    { name: "Money",                pct: 45, color: "bg-hoovy-orange", trackBorder: "border-hoovy-orange" },
+    { name: "Time",                 pct: 55, color: "bg-hoovy-sky",    trackBorder: "border-hoovy-sky" },
+  ] as SkillFocus[],
 };
 
-const DOMAIN_COLORS: Record<DomainProgress["domain"], string> = {
-  communication: "bg-blue-400",
-  social: "bg-purple-400",
-  money: "bg-emerald-400",
-  time: "bg-amber-400",
-  practical: "bg-pink-400",
+// 3D stat card: white face, thick colored border, solid offset shadow
+type StatTone = "green" | "yellow" | "blue";
+const STAT_TONE: Record<StatTone, { border: string; shadow: string }> = {
+  green:  { border: "border-hoovy-green",  shadow: "shadow-[0_6px_0_#2A9038]" },
+  yellow: { border: "border-hoovy-yellow", shadow: "shadow-[0_6px_0_#D98A1C]" },
+  blue:   { border: "border-hoovy-sky",    shadow: "shadow-[0_6px_0_#1C86D9]" },
 };
 
-function StatCard({ label, value, suffix }: { label: string; value: string | number; suffix?: string }) {
+function StatCard({
+  label,
+  value,
+  icon,
+  tone,
+}: {
+  label: string;
+  value: string | number;
+  icon: Emoji3DName;
+  tone: StatTone;
+}) {
+  const t = STAT_TONE[tone];
   return (
-    <div className="bg-white rounded-3xl shadow-md p-5">
-      <div className="text-xs font-bold text-gray-400 uppercase">{label}</div>
-      <div className="text-3xl font-extrabold text-gray-800 mt-1">
-        {value}
-        {suffix && <span className="text-base text-gray-400 font-bold ml-1">{suffix}</span>}
+    <div className={`bg-white rounded-3xl px-2 py-4 flex flex-col items-center gap-1 border-[5px] ${t.border} ${t.shadow}`}>
+      <div className="text-[10px] font-extrabold text-hoovy-navy/55 uppercase tracking-wide text-center leading-tight min-h-[24px] px-1">
+        {label}
       </div>
+      <div className="text-2xl font-extrabold text-hoovy-navy" style={{ fontFamily: 'Fredoka' }}>{value}</div>
+      <Emoji3D name={icon} size={32} />
     </div>
   );
 }
 
-function AccuracyRing({ accuracy }: { accuracy: number }) {
-  const pct = Math.round(accuracy * 100);
-  const dashoffset = 264 * (1 - accuracy);
+function SkillBar({ skill }: { skill: SkillFocus }) {
   return (
-    <div className="bg-white rounded-3xl shadow-md p-5 flex items-center gap-5">
-      <div className="relative w-28 h-28">
-        <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-          <circle cx="50" cy="50" r="42" fill="none" stroke="#e5e7eb" strokeWidth="10" />
-          <circle
-            cx="50"
-            cy="50"
-            r="42"
-            fill="none"
-            stroke="url(#ring-grad)"
-            strokeWidth="10"
-            strokeLinecap="round"
-            strokeDasharray="264"
-            strokeDashoffset={dashoffset}
-            className="transition-all duration-700"
-          />
-          <defs>
-            <linearGradient id="ring-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#60a5fa" />
-              <stop offset="100%" stopColor="#a78bfa" />
-            </linearGradient>
-          </defs>
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <div className="text-3xl font-extrabold text-gray-800">{pct}%</div>
-          <div className="text-xs font-bold text-gray-400 uppercase">accuracy</div>
-        </div>
+    <div>
+      <div className="flex justify-between text-sm mb-1">
+        <span className="font-extrabold text-hoovy-navy">{skill.name}</span>
+        <span className="text-hoovy-navy/60 font-extrabold">{skill.pct}%</span>
       </div>
-      <div className="flex-1">
-        <div className="text-sm text-gray-500">Overall accuracy across</div>
-        <div className="text-xl font-extrabold text-gray-800">all sessions</div>
-        <div className="text-xs text-gray-400 mt-2">Higher is better. Hoovy adapts hints when this drops.</div>
+      <div className={`h-4 bg-hoovy-cream rounded-full overflow-hidden border-[2px] ${skill.trackBorder}`}>
+        <div
+          className={`h-full rounded-full transition-all duration-700 ${skill.color}`}
+          style={{ width: `${skill.pct}%`, boxShadow: "inset 0 2px 0 rgba(255,255,255,0.4)" }}
+        />
       </div>
-    </div>
-  );
-}
-
-function DomainBars({ domains }: { domains: DomainProgress[] }) {
-  const max = Math.max(...domains.map((d) => d.attempted));
-  return (
-    <div className="bg-white rounded-3xl shadow-md p-5">
-      <h3 className="font-extrabold text-gray-800 mb-4">By skill area</h3>
-      <div className="flex flex-col gap-3">
-        {domains.map((d) => {
-          const acc = d.attempted ? d.correct / d.attempted : 0;
-          const width = max ? (d.attempted / max) * 100 : 0;
-          return (
-            <div key={d.domain}>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="font-bold capitalize text-gray-700">{d.domain}</span>
-                <span className="text-gray-500">
-                  {d.correct}/{d.attempted} · {Math.round(acc * 100)}%
-                </span>
-              </div>
-              <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className={`h-full ${DOMAIN_COLORS[d.domain]} transition-all`}
-                  style={{ width: `${width}%` }}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function WeeklySparkline({ minutes }: { minutes: number[] }) {
-  const max = Math.max(...minutes, 1);
-  const days = ["M", "T", "W", "T", "F", "S", "S"];
-  return (
-    <div className="bg-white rounded-3xl shadow-md p-5">
-      <h3 className="font-extrabold text-gray-800 mb-4">Minutes this week</h3>
-      <div className="flex items-end gap-2 h-32">
-        {minutes.map((m, i) => (
-          <div key={i} className="flex-1 flex flex-col items-center gap-1">
-            <div className="flex-1 w-full flex items-end">
-              <div
-                className="w-full bg-gradient-to-t from-hoovy-blue to-hoovy-purple rounded-t-lg transition-all"
-                style={{ height: `${(m / max) * 100}%`, minHeight: m > 0 ? "6px" : "0" }}
-              />
-            </div>
-            <div className="text-xs font-bold text-gray-400">{days[i]}</div>
-            <div className="text-xs text-gray-500">{m}m</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function RecentSessions({ sessions }: { sessions: SessionSummary[] }) {
-  return (
-    <div className="bg-white rounded-3xl shadow-md p-5">
-      <h3 className="font-extrabold text-gray-800 mb-4">Recent sessions</h3>
-      <ul className="flex flex-col divide-y divide-gray-100">
-        {sessions.map((s, i) => (
-          <li key={i} className="py-3 flex items-center justify-between">
-            <div>
-              <div className="font-bold text-gray-800">{s.scenario_title}</div>
-              <div className="text-xs text-gray-400">
-                {s.date} · {s.steps_done}/{s.total_steps} steps
-              </div>
-            </div>
-            <div
-              className={`text-sm font-extrabold ${
-                s.accuracy >= 0.8
-                  ? "text-emerald-500"
-                  : s.accuracy >= 0.5
-                  ? "text-amber-500"
-                  : "text-red-400"
-              }`}
-            >
-              {Math.round(s.accuracy * 100)}%
-            </div>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }
 
 export function ProgressPage() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-  const { data: kids } = useMyKids();
-  const { activeKidId } = useActiveKid();
-  const activeKid = kids?.find((k) => k.id === activeKidId);
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-hoovy-bg flex items-center justify-center p-8">
-        <div className="bg-white rounded-3xl shadow-lg p-10 max-w-md text-center">
-          <div className="text-6xl mb-4">🔐</div>
-          <h1 className="text-2xl font-extrabold text-gray-800 mb-2">Parents only</h1>
-          <p className="text-gray-500 mb-6">Sign in to see progress for your kids.</p>
-          <button
-            onClick={() => navigate("/login")}
-            className="bg-hoovy-blue text-white font-bold px-6 py-3 rounded-2xl hover:opacity-90"
-          >
-            Go to Login
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const overallAccuracy =
-    MOCK_PROGRESS.domains.reduce((acc, d) => acc + d.correct, 0) /
-    Math.max(1, MOCK_PROGRESS.domains.reduce((acc, d) => acc + d.attempted, 0));
 
   return (
-    <div className="min-h-screen bg-hoovy-bg p-6 md:p-10">
-      <div className="max-w-5xl mx-auto">
-        <div className="mb-6 flex items-end justify-between flex-wrap gap-3">
-          <div>
-            <div className="flex items-center gap-3">
-              <span className="text-4xl">{activeKid?.avatar_emoji ?? "📊"}</span>
-              <h1 className="text-3xl font-extrabold text-gray-800">
-                {activeKid ? `${activeKid.display_name}'s progress` : "Progress"}
-              </h1>
+    <SceneBackdrop variant="rainbow" scenery={false}>
+      <div className="min-h-screen flex flex-col">
+        {/* Header */}
+        <header className="px-4 pt-6 pb-3 flex items-center gap-3 max-w-md w-full mx-auto">
+          <button
+            onClick={() => navigate("/episodes")}
+            className="w-12 h-12 rounded-full bg-white border-[4px] border-white shadow-[0_5px_0_rgba(0,0,0,0.1)] flex items-center justify-center text-hoovy-skyDeep active:translate-y-[5px] active:!shadow-none transition-all"
+            aria-label="Back"
+          >
+            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+          <h1 className="flex-1 text-center text-xl font-extrabold text-hoovy-navy" style={{ fontFamily: 'Fredoka' }}>
+            Growth &amp; Progress
+          </h1>
+          <ScoreBadge score={12} />
+        </header>
+
+        {/* Mascot + rainbow + greeting */}
+        <section className="relative max-w-md w-full mx-auto px-6 pt-2 pb-4">
+          <div className="absolute top-0 right-0 w-56 h-32 pointer-events-none opacity-95">
+            <Rainbow />
+          </div>
+
+          <div className="flex items-end gap-3 relative z-10">
+            <div className="relative">
+              <HoovyMascot size={140} speaking pose="cheer" />
+              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-24 h-2 rounded-full bg-black/15 blur" />
             </div>
-            <p className="text-gray-500 mt-1 text-sm">
-              {activeKid
-                ? "What's working, what to practice next."
-                : "Pick a kid first to see their numbers."}
+            <div className="bg-white rounded-3xl px-4 py-3 mb-3 relative border-[4px] border-hoovy-pink shadow-[0_5px_0_#D93D55]">
+              <p className="text-sm font-extrabold text-hoovy-navy leading-tight">
+                Great job!
+              </p>
+              <p className="text-sm font-extrabold text-hoovy-pink leading-tight">
+                Keep going!
+              </p>
+              <span className="absolute -left-3 bottom-3 w-0 h-0 border-y-8 border-y-transparent border-r-[10px] border-r-hoovy-pink" />
+            </div>
+          </div>
+        </section>
+
+        {/* Main content card — pb-28 leaves room for the fixed BottomNav */}
+        <section className="max-w-md w-full mx-auto px-4 pb-28 flex-1">
+          <div className="bg-white rounded-3xl p-5 flex flex-col gap-5 border-[6px] border-white shadow-[0_8px_0_rgba(0,0,0,0.06)]">
+            <div className="grid grid-cols-3 gap-3">
+              <StatCard label="Activities Completed" value={MOCK.activities_completed} icon="check" tone="green" />
+              <StatCard label="Stars Earned" value={MOCK.stars_earned} icon="star" tone="yellow" />
+              <StatCard label="Time Spent" value={MOCK.time_spent} icon="alarm" tone="blue" />
+            </div>
+
+            <div>
+              <h3 className="font-extrabold text-hoovy-navy mb-3" style={{ fontFamily: 'Fredoka' }}>Skill Focus Areas</h3>
+              <div className="flex flex-col gap-3">
+                {MOCK.skill_focus.map((s) => (
+                  <SkillBar key={s.name} skill={s} />
+                ))}
+              </div>
+            </div>
+
+            <p className="text-[10px] text-hoovy-navy/40 text-center">
+              Numbers shown are demo data.
             </p>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => navigate("/kids")}
-              className="text-sm font-bold text-hoovy-blue hover:underline"
-            >
-              Switch kid
-            </button>
-            <button
-              onClick={() => navigate("/")}
-              className="text-sm font-bold text-gray-500 hover:underline"
-            >
-              Playground
-            </button>
-          </div>
-        </div>
+        </section>
 
-        {!activeKid && (
-          <div className="bg-yellow-50 border-2 border-yellow-200 rounded-2xl p-4 mb-6 text-yellow-800 text-sm">
-            No active kid selected — showing demo data.{" "}
-            <button onClick={() => navigate("/kids")} className="underline font-bold">
-              Pick a kid
-            </button>
-            .
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-          <StatCard label="Sessions" value={MOCK_PROGRESS.sessions_total} />
-          <StatCard label="Scenarios done" value={MOCK_PROGRESS.scenarios_completed} />
-          <StatCard label="Streak" value={MOCK_PROGRESS.streak_days} suffix="days" />
-          <StatCard label="Avg attempts" value={MOCK_PROGRESS.avg_attempts_to_correct} suffix="/correct" />
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-4 mb-4">
-          <AccuracyRing accuracy={overallAccuracy} />
-          <WeeklySparkline minutes={MOCK_PROGRESS.weekly_minutes} />
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-4">
-          <DomainBars domains={MOCK_PROGRESS.domains} />
-          <RecentSessions sessions={MOCK_PROGRESS.recent} />
-        </div>
-
-        <p className="text-xs text-gray-400 mt-6 text-center">
-          Numbers shown are demo data. Live aggregation hooks up to{" "}
-          <code className="bg-gray-100 px-1 rounded">/api/v1/kids/{"{id}"}/progress</code> in v2.
-        </p>
+        <BottomNav />
       </div>
-    </div>
+    </SceneBackdrop>
+  );
+}
+
+function Rainbow() {
+  return (
+    <svg viewBox="0 0 200 100" className="w-full h-full">
+      <path d="M10 100 A90 90 0 0 1 190 100" fill="none" stroke="#FF4766" strokeWidth="10" />
+      <path d="M22 100 A78 78 0 0 1 178 100" fill="none" stroke="#FF9800" strokeWidth="10" />
+      <path d="M34 100 A66 66 0 0 1 166 100" fill="none" stroke="#FFD833" strokeWidth="10" />
+      <path d="M46 100 A54 54 0 0 1 154 100" fill="none" stroke="#3CB84B" strokeWidth="10" />
+      <path d="M58 100 A42 42 0 0 1 142 100" fill="none" stroke="#47C2FF" strokeWidth="10" />
+      <path d="M70 100 A30 30 0 0 1 130 100" fill="none" stroke="#A877FF" strokeWidth="10" />
+    </svg>
   );
 }

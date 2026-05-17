@@ -12,7 +12,7 @@ async def test_log_attention_created(client, monkeypatch):
     # Create a session first
     create = await client.post(
         "/api/v1/sessions",
-        json={"scenario_id": "greet-teacher", "kid_name": "T", "language": "en"},
+        json={"scenario_id": "greet-teacher", "language": "en"},
     )
     assert create.status_code == 201
     sid = create.json()["id"]

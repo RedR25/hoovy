@@ -11,16 +11,16 @@
     {
       "id": "step-1",
       "order": 1,
-      "teacher_prompt": "Hi there! My name is Ms. Linh. Can you say hello back to me?",
+      "teacher_prompt": "Hi there! My name is Hoovy. Can you say hello back to me?",
       "scene_image_url": "/static/images/greet-teacher/step-1.png",
       "scene_image_prompt": "A friendly kindergarten teacher waving warmly, soft warm pastel colors, cartoon kid-friendly illustration, plain pastel background, diverse appearance, no text",
       "response_type": "voice_or_choice",
       "choices": [
-        { "id": "a", "text": "Hi Ms. Linh!", "is_correct": true },
+        { "id": "a", "text": "Hi Hoovy!", "is_correct": true },
         { "id": "b", "text": "Goodbye!", "is_correct": false },
         { "id": "c", "text": "(say nothing)", "is_correct": false }
       ],
-      "voice_accepts": ["hi", "hello", "hi ms linh", "hello ms linh", "hey"],
+      "voice_accepts": ["hi", "hello", "hi hoovy", "hello hoovy", "hey"],
       "hint_on_wrong": "When you meet a teacher, you say 'Hi' or 'Hello'. Try again.",
       "hint_image_url": "/static/images/greet-teacher/step-1-hint.png",
       "praise_on_correct": "Great job! That was a very nice greeting.",
@@ -48,7 +48,7 @@
       "scene_image_prompt": "Friendly teacher waving goodbye warmly at the end of class, soft warm pastel colors, cartoon kid-friendly illustration, plain pastel background, no text",
       "response_type": "voice_or_choice",
       "choices": [
-        { "id": "a", "text": "Goodbye, Ms. Linh!", "is_correct": true },
+        { "id": "a", "text": "Goodbye, Hoovy!", "is_correct": true },
         { "id": "b", "text": "Hello!", "is_correct": false },
         { "id": "c", "text": "(walk away silently)", "is_correct": false }
       ],
