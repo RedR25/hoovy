@@ -1,0 +1,65 @@
+{
+  "id": "paying-for-treat",
+  "title": "Paying for a treat",
+  "skill_domain": "money",
+  "difficulty": 2,
+  "thumbnail_url": null,
+  "estimated_minutes": 4,
+  "language": "en",
+  "child_interests": null,
+  "steps": [
+    {
+      "id": "step-1",
+      "order": 1,
+      "teacher_prompt": "You want to buy an ice cream. What do you do first?",
+      "scene_image_url": null,
+      "scene_image_prompt": "Hoovy the otter near an ice-cream shop counter with other kids in line, bright pastel street scene",
+      "response_type": "voice_or_choice",
+      "choices": [
+        { "id": "a", "text": "Wait in line", "is_correct": true },
+        { "id": "b", "text": "Push to the front", "is_correct": false },
+        { "id": "c", "text": "Take it and run", "is_correct": false }
+      ],
+      "voice_accepts": ["wait", "wait in line", "line up", "stand in line"],
+      "hint_on_wrong": "We wait our turn in line.",
+      "hint_image_url": null,
+      "praise_on_correct": "Yes! Waiting your turn is the kind thing to do.",
+      "max_attempts": 3
+    },
+    {
+      "id": "step-2",
+      "order": 2,
+      "teacher_prompt": "The clerk says the ice cream costs two dollars. What do you give?",
+      "scene_image_url": null,
+      "scene_image_prompt": "Hoovy the otter holding out two one-dollar bills to a friendly shopkeeper, bright pastel shop counter",
+      "response_type": "voice_or_choice",
+      "choices": [
+        { "id": "a", "text": "Two dollars", "is_correct": true },
+        { "id": "b", "text": "One penny", "is_correct": false },
+        { "id": "c", "text": "Nothing", "is_correct": false }
+      ],
+      "voice_accepts": ["two dollars", "two", "2 dollars", "two bucks"],
+      "hint_on_wrong": "Ice cream costs two dollars. Hand the clerk two dollars.",
+      "hint_image_url": null,
+      "praise_on_correct": "Perfect! That's exactly the right amount.",
+      "max_attempts": 3
+    },
+    {
+      "id": "step-3",
+      "order": 3,
+      "teacher_prompt": "You got your ice cream! What do you say to the clerk?",
+      "scene_image_url": null,
+      "scene_image_prompt": "Hoovy the otter holding a strawberry ice cream cone with a happy smile, friendly shopkeeper smiling back",
+      "response_type": "voice_or_choice",
+      "choices": [
+        { "id": "a", "text": "Thank you!", "is_correct": true },
+        { "id": "b", "text": "Goodbye!", "is_correct": false },
+        { "id": "c", "text": "(say nothing)", "is_correct": false }
+      ],
+      "voice_accepts": ["thank you", "thanks"],
+      "hint_on_wrong": "Say 'Thank you' when someone serves you.",
+      "hint_image_url": null,
+      "praise_on_correct": "Lovely! Now enjoy your treat."
+    }
+  ]
+}
