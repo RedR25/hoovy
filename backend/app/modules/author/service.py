@@ -31,6 +31,11 @@ _AUTHOR_PROMPT = _PROMPT_PATH.read_text(encoding="utf-8")
 # In-memory draft store. Process-local; fine for a single-process demo.
 _DRAFTS: dict[str, Scenario] = {}
 
+# Strong refs to fire-and-forget image-gen tasks. Without this the event loop
+# only keeps weak refs and tasks get garbage-collected mid-run — which is why
+# newly-authored scenarios showed broken thumbnails.
+_BG_IMAGE_TASKS: set[asyncio.Task] = set()
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -198,6 +203,14 @@ class AuthorService:
 
         _write_scenario(scenario, scenarios_dir)
         self.scenario_service.reload()
+        # Generate the thumbnail synchronously so the new card has an image
+        # the moment /scenarios returns it. Scene/hint images stay async.
+        await self.image_gen_service.generate(
+            scenario_id=scenario.id,
+            step_id="thumb",
+            prompt=f"Thumbnail for scenario: {scenario.title}",
+            kind="thumbnail",
+        )
         self._kick_off_images(scenario)
         return scenario
 
@@ -272,14 +285,8 @@ class AuthorService:
                             kind="hint",
                         )
                     )
-            tasks.append(
-                self.image_gen_service.generate(
-                    scenario_id=scenario.id,
-                    step_id="thumb",
-                    prompt=f"Thumbnail for scenario: {scenario.title}",
-                    kind="thumbnail",
-                )
-            )
             await asyncio.gather(*tasks, return_exceptions=True)
 
-        asyncio.create_task(_gen_all())
+        task = asyncio.create_task(_gen_all())
+        _BG_IMAGE_TASKS.add(task)
+        task.add_done_callback(_BG_IMAGE_TASKS.discard)
