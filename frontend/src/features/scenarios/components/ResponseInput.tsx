@@ -1,3 +1,4 @@
+import type { MouseEvent } from "react";
 import type { Choice, ResponseType } from "@/features/scenarios/types";
 
 interface ResponseInputProps {
@@ -6,8 +7,8 @@ interface ResponseInputProps {
   isRecording: boolean;
   isEvaluating: boolean;
   disabled: boolean;
-  onToggle: () => void;
-  onChoice?: (choiceId: string) => void;
+  onToggle: (ev?: MouseEvent<HTMLElement>) => void;
+  onChoice?: (choiceId: string, ev?: MouseEvent<HTMLElement>) => void;
 }
 
 export function ResponseInput({
@@ -44,7 +45,7 @@ export function ResponseInput({
       {showMic && (
         <div className="flex flex-col items-center gap-2">
           <button
-            onClick={onToggle}
+            onClick={(ev) => onToggle(ev)}
             disabled={disabled || isEvaluating}
             aria-label={label}
             className={[
@@ -77,7 +78,7 @@ export function ResponseInput({
             <button
               key={choice.id}
               disabled={disabled || isEvaluating}
-              onClick={() => onChoice?.(choice.id)}
+              onClick={(ev) => onChoice?.(choice.id, ev)}
               className={[
                 "w-full px-5 rounded-3xl border-2 font-bold text-left transition-all active:scale-95",
                 "min-h-[80px] md:min-h-[100px]",

@@ -31,3 +31,7 @@ logs/
 # DB
 *.db
 *.sqlite3
+
+# HuggingFace model cache (Kokoro weights)
+.hf_cache/
+backend/.hf_cache/

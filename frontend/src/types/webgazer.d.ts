@@ -15,6 +15,9 @@ declare module "webgazer" {
     clearGazeListener: () => WebGazer;
     pause: () => void;
     resume: () => void;
+    /** Feed a calibration sample mapping the current eye signal to (x, y). */
+    recordScreenPosition: (x: number, y: number, eventType?: string) => void;
+    clearData: () => void;
     params: Record<string, unknown>;
   }
   const webgazer: WebGazer;

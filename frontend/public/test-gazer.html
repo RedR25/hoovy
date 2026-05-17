@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>WebGazer · Hoovy test rig</title>
+  <style>
+    * { box-sizing: border-box }
+    html, body { margin: 0; padding: 0; height: 100%; background: #0f1116; color: #e6e6e6;
+      font: 14px/1.4 system-ui, -apple-system, Segoe UI, sans-serif; overflow: hidden; }
+
+    #dot {
+      position: fixed; width: 24px; height: 24px; border-radius: 50%;
+      background: #ff3b30; border: 3px solid #fff;
+      pointer-events: none; z-index: 9999; transform: translate(-50%, -50%);
+      mix-blend-mode: difference; transition: top 60ms linear, left 60ms linear;
+    }
+    #dot.off { background: #ffd60a; }
+    #dot.hidden { display: none; }
+
+    #panel {
+      position: fixed; left: 16px; top: 16px; width: 380px;
+      background: rgba(20,22,28,0.92); border: 1px solid #2a2e38; border-radius: 12px;
+      padding: 16px; backdrop-filter: blur(6px); z-index: 10000;
+    }
+    h1 { margin: 0 0 8px; font-size: 16px; letter-spacing: 0.02em; }
+    .row { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0;
+      border-bottom: 1px dashed #2a2e38; font-variant-numeric: tabular-nums; }
+    .row:last-child { border-bottom: 0; }
+    .row b { color: #a3b5cf; font-weight: 600; }
+    .row span { color: #fff; }
+    .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-weight: 700; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; }
+    .pill.ok { background: #1a7f37; color: #d4ffe2; }
+    .pill.warn { background: #b08800; color: #fff8d4; }
+    .pill.err { background: #b00020; color: #ffd9df; }
+    .pill.idle { background: #2a2e38; color: #a3b5cf; }
+
+    #log { margin-top: 12px; max-height: 220px; overflow-y: auto; font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: #a3b5cf; }
+    #log .e { display: block; }
+    #log .e.err { color: #ff7a85; }
+    #log .e.ok  { color: #7ee2a8; }
+
+    #bounds {
+      position: fixed; pointer-events: none; z-index: 9998;
+      border: 2px dashed rgba(126, 226, 168, 0.4);
+      top: 40px; left: 40px;
+      right: 40px; bottom: 40px;
+    }
+    #bounds.off { border-color: rgba(255, 214, 10, 0.6); }
+
+    /* Click hint that pulses where you should look-and-click for self-calibration */
+    .click-target {
+      position: fixed; width: 36px; height: 36px; border-radius: 50%;
+      background: #6c5ce7; cursor: crosshair; z-index: 9997;
+      box-shadow: 0 0 0 4px rgba(108,92,231,0.25), 0 0 24px rgba(108,92,231,0.6);
+      animation: pulse 1.2s ease-in-out infinite;
+      transform: translate(-50%, -50%); color: white; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; font-size: 14px;
+    }
+    .click-target.done { background: #1a7f37; box-shadow: 0 0 0 4px rgba(26,127,55,0.25); animation: none; }
+    @keyframes pulse { 50% { box-shadow: 0 0 0 14px rgba(108,92,231,0); } }
+
+    .btn {
+      background: #6c5ce7; color: #fff; border: 0; padding: 6px 12px; border-radius: 8px;
+      font-weight: 700; font-size: 12px; cursor: pointer; margin-right: 6px;
+    }
+    .btn.ghost { background: transparent; border: 1px solid #3a3f4c; color: #a3b5cf; }
+    .btn:hover { filter: brightness(1.1); }
+
+    #helper { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); text-align: center;
+      color: #a3b5cf; font-size: 12px; z-index: 10000; pointer-events: none;
+      background: rgba(20,22,28,0.85); padding: 8px 16px; border-radius: 999px; }
+  </style>
+</head>
+<body>
+
+<div id="bounds"></div>
+<div id="dot" class="hidden"></div>
+
+<div id="panel">
+  <h1>WebGazer test rig</h1>
+  <div class="row"><b>Init</b><span id="initStatus"><span class="pill idle">pending</span></span></div>
+  <div class="row"><b>Camera</b><span id="camStatus"><span class="pill idle">—</span></span></div>
+  <div class="row"><b>Samples / s</b><span id="hz">0.0</span></div>
+  <div class="row"><b>Coords</b><span id="coords">—</span></div>
+  <div class="row"><b>Viewport</b><span id="viewport">—</span></div>
+  <div class="row"><b>On-screen</b><span id="onScreen"><span class="pill idle">—</span></span></div>
+  <div class="row"><b>Last sample</b><span id="age">—</span></div>
+  <div class="row"><b>Calibration clicks</b><span id="calClicks">0</span></div>
+  <div style="margin-top:10px">
+    <button class="btn" id="btnCal">Self-calibrate (9 pts)</button>
+    <button class="btn ghost" id="btnReset">Reset model</button>
+    <button class="btn ghost" id="btnClear">Clear log</button>
+  </div>
+  <div id="log"></div>
+</div>
+
+<div id="helper">Tip — every click anywhere on this page also teaches WebGazer where your eyes were looking. Click around naturally to self-calibrate.</div>
+
+<!-- Use jsdelivr-hosted webgazer to avoid the broken upstream copy. -->
+<script src="https://cdn.jsdelivr.net/npm/webgazer@3.3.0/dist/webgazer.min.js" defer></script>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const log = (msg, cls = "") => {
+    const el = $("log");
+    const e = document.createElement("span");
+    e.className = "e " + cls;
+    const t = new Date().toISOString().slice(11, 19);
+    e.textContent = `[${t}] ${msg}`;
+    el.appendChild(e);
+    el.scrollTop = el.scrollHeight;
+  };
+
+  const pill = (label, kind) => `<span class="pill ${kind}">${label}</span>`;
+  const MARGIN = 40;
+
+  let lastSampleAt = 0;
+  let sampleCount = 0;
+  let hzWindowStart = Date.now();
+  let calClicks = 0;
+
+  function refreshViewport() {
+    $("viewport").textContent = `${window.innerWidth}×${window.innerHeight} (margin ${MARGIN}px)`;
+  }
+  refreshViewport();
+  window.addEventListener("resize", refreshViewport);
+
+  function isOnScreen(x, y) {
+    return x >= MARGIN && x <= window.innerWidth - MARGIN
+        && y >= MARGIN && y <= window.innerHeight - MARGIN;
+  }
+
+  function tickAge() {
+    if (!lastSampleAt) $("age").textContent = "—";
+    else $("age").textContent = `${Date.now() - lastSampleAt} ms ago`;
+    const elapsed = Date.now() - hzWindowStart;
+    if (elapsed >= 1000) {
+      $("hz").textContent = ((sampleCount * 1000) / elapsed).toFixed(1);
+      hzWindowStart = Date.now();
+      sampleCount = 0;
+    }
+    requestAnimationFrame(tickAge);
+  }
+  requestAnimationFrame(tickAge);
+
+  function onGaze(data) {
+    if (!data) return;
+    sampleCount++;
+    lastSampleAt = Date.now();
+    const x = Math.max(0, Math.min(window.innerWidth, data.x));
+    const y = Math.max(0, Math.min(window.innerHeight, data.y));
+    const dot = $("dot");
+    dot.classList.remove("hidden");
+    dot.style.left = `${x}px`;
+    dot.style.top = `${y}px`;
+    const onScreen = isOnScreen(data.x, data.y);
+    dot.classList.toggle("off", !onScreen);
+    $("bounds").classList.toggle("off", !onScreen);
+    $("coords").textContent = `(${Math.round(data.x)}, ${Math.round(data.y)})`;
+    $("onScreen").innerHTML = onScreen ? pill("yes", "ok") : pill("no", "warn");
+  }
+
+  function setInitStatus(label, kind) { $("initStatus").innerHTML = pill(label, kind); }
+  function setCamStatus(label, kind)  { $("camStatus").innerHTML  = pill(label, kind); }
+
+  // Manually feed every click into WebGazer as a calibration sample.
+  // WebGazer 3.x already does this internally on document clicks, but doing
+  // it explicitly + counting it makes the calibration visible to the user.
+  function feedClickToWebgazer(ev) {
+    if (!window.webgazer || !window.webgazer.recordScreenPosition) return;
+    try {
+      window.webgazer.recordScreenPosition(ev.clientX, ev.clientY, "click");
+      calClicks++;
+      $("calClicks").textContent = String(calClicks);
+    } catch (e) {
+      log(`recordScreenPosition failed: ${e}`, "err");
+    }
+  }
+  // Capture phase so even clicks on overlay targets get counted.
+  document.addEventListener("click", feedClickToWebgazer, true);
+
+  async function start() {
+    if (!window.webgazer) {
+      setInitStatus("script missing", "err");
+      log("webgazer.js failed to load. Check network / ad-blocker.", "err");
+      return;
+    }
+    setInitStatus("loading", "warn");
+    log("configuring webgazer…");
+    try {
+      // Configure BEFORE begin(). Do NOT call show*() here — those manipulate
+      // DOM that doesn't exist until begin() resolves.
+      window.webgazer
+        .setRegression("ridge")
+        .saveDataAcrossSessions(false)
+        .setGazeListener(onGaze);
+
+      log("calling webgazer.begin()");
+      await window.webgazer.begin();
+
+      // Now safe to toggle UI overlays.
+      window.webgazer
+        .showVideoPreview(true)
+        .showFaceOverlay(true)
+        .showFaceFeedbackBox(true)
+        .showPredictionPoints(false);
+
+      setInitStatus("ready", "ok");
+      setCamStatus("granted", "ok");
+      log("webgazer ready — listener attached", "ok");
+    } catch (err) {
+      setInitStatus("failed", "err");
+      const msg = (err && err.message) || String(err);
+      const denied = /denied|NotAllowed|permission/i.test(msg);
+      setCamStatus(denied ? "denied" : "error", "err");
+      log(`init failed: ${msg}`, "err");
+      log(
+        denied
+          ? "Click the lock icon → Camera → Allow → refresh."
+          : "Try a different browser / unplug-replug webcam / close other tabs using camera.",
+        "err",
+      );
+    }
+  }
+
+  // 9-point structured calibration: shows targets one at a time, requires
+  // looking at each and clicking 3 times. Each click is also captured by
+  // the global listener above so the regression updates.
+  function calibrate() {
+    document.querySelectorAll(".click-target").forEach((n) => n.remove());
+    const xs = [0.1, 0.5, 0.9];
+    const ys = [0.1, 0.5, 0.9];
+    let pending = 9 * 3;
+    log(`structured calibration: ${pending} clicks (9 dots × 3)`);
+
+    xs.forEach((fx) => ys.forEach((fy) => {
+      const t = document.createElement("div");
+      t.className = "click-target";
+      t.dataset.clicks = "0";
+      t.style.left = (window.innerWidth * fx) + "px";
+      t.style.top  = (window.innerHeight * fy) + "px";
+      const remaining = document.createElement("span");
+      remaining.textContent = "3";
+      t.appendChild(remaining);
+      t.addEventListener("click", () => {
+        const c = parseInt(t.dataset.clicks || "0", 10) + 1;
+        t.dataset.clicks = String(c);
+        remaining.textContent = String(Math.max(0, 3 - c));
+        if (c >= 3) {
+          t.classList.add("done");
+          t.style.pointerEvents = "none";
+          remaining.textContent = "✓";
+        }
+        pending--;
+        if (pending === 0) {
+          log("structured calibration complete — try looking around now", "ok");
+          setTimeout(() => document.querySelectorAll(".click-target").forEach((n) => n.remove()), 800);
+        }
+      });
+      document.body.appendChild(t);
+    }));
+  }
+
+  function resetModel() {
+    try {
+      window.webgazer && window.webgazer.clearData && window.webgazer.clearData();
+      calClicks = 0;
+      $("calClicks").textContent = "0";
+      document.querySelectorAll(".click-target").forEach((n) => n.remove());
+      log("calibration data cleared", "ok");
+    } catch (e) {
+      log(`reset failed: ${e}`, "err");
+    }
+  }
+
+  $("btnCal").addEventListener("click", calibrate);
+  $("btnReset").addEventListener("click", resetModel);
+  $("btnClear").addEventListener("click", () => { $("log").innerHTML = ""; });
+
+  if (document.readyState === "complete") start();
+  else window.addEventListener("load", start);
+})();
+</script>
+</body>
+</html>

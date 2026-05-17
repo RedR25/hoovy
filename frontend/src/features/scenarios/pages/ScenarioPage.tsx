@@ -8,6 +8,7 @@ import { ProgressBar } from "@/features/scenarios/components/ProgressBar";
 import { KidNameModal } from "@/features/scenarios/components/KidNameModal";
 import { ResponseInput } from "@/features/scenarios/components/ResponseInput";
 import { GazeMonitor } from "@/features/scenarios/components/GazeMonitor";
+import { GazePill } from "@/features/scenarios/components/GazePill";
 import { useAudioOut } from "@/features/scenarios/hooks/useAudioOut";
 import { useAudioIn } from "@/features/scenarios/hooks/useAudioIn";
 import { useEvaluate } from "@/features/scenarios/hooks/useEvaluate";
@@ -18,13 +19,34 @@ import type { SessionRead, EvaluateResponse } from "@/features/scenarios/types";
 // ── Constants ──────────────────────────────────────────────────────────────
 const MIN_BLOB_BYTES = 1024; // blobs smaller than this are "silent"
 
-const REDIRECT_PHRASES = [
-  "Look at me, please.",
-  "Eyes here, friend.",
-  "Let's keep going together.",
-  "Hey, I'm over here!",
-  "Come back, we're almost done!",
-];
+/**
+ * Autism-friendly redirect phrases. Principles:
+ *  - Invitations, not commands ("when you're ready" beats "look at me")
+ *  - Patient, never urgent
+ *  - Joint-attention framing ("the picture", "together")
+ *  - Use the child's name when we have it (warm, person-centered)
+ *  - No demand for eye contact — "look at the picture", not "look at me"
+ *  - Reassurance that the system isn't rushing them
+ */
+function buildRedirectPhrase(kidName: string | null): string {
+  const name = kidName && kidName !== "Anonymous" ? kidName : null;
+  const phrases = name
+    ? [
+        `Hi ${name}. I'm right here when you're ready.`,
+        `Take your time, ${name}. The picture is waiting.`,
+        `Whenever you're ready, ${name}.`,
+        `It's okay, ${name}. We can take a little break.`,
+        `${name}, look at the picture when you can.`,
+      ]
+    : [
+        "I'm right here when you're ready.",
+        "Take your time. The picture is waiting.",
+        "Whenever you're ready, friend.",
+        "It's okay. We can take a little break.",
+        "Look at the picture when you can.",
+      ];
+  return phrases[Math.floor(Math.random() * phrases.length)];
+}
 
 interface Feedback {
   text: string;
@@ -67,12 +89,18 @@ export function ScenarioPage() {
 
   const handleAttentionDrop = useCallback(() => {
     redirectCountRef.current += 1;
-    const phrase =
-      REDIRECT_PHRASES[Math.floor(Math.random() * REDIRECT_PHRASES.length)];
+    const kidName = localStorage.getItem("hoovy_kid_name");
+    const phrase = buildRedirectPhrase(kidName);
     play(phrase);
   }, [play]);
 
-  const { gazePosition, currentlyOnScreen, offScreenSeconds } = useGaze({
+  const {
+    status: gazeStatus,
+    errorMessage: gazeError,
+    hasFirstSample: gazeHasSample,
+    facePresent,
+    awaySeconds,
+  } = useGaze({
     enabled: gazeEnabled,
     onAttentionDrop: handleAttentionDrop,
   });
@@ -132,13 +160,13 @@ export function ScenarioPage() {
     // Post attention for the step we're leaving (skip first mount)
     if (step?.id && gazeEnabled) {
       const elapsed = (Date.now() - stepStartRef.current) / 1000;
-      const onScreenPct = elapsed > 0
-        ? Math.max(0, 1 - offScreenSeconds / elapsed)
+      const presentPct = elapsed > 0
+        ? Math.max(0, 1 - awaySeconds / elapsed)
         : 1;
       postAttentionLog(
         step.id,
-        Math.round(onScreenPct * 100) / 100,
-        offScreenSeconds,
+        Math.round(presentPct * 100) / 100,
+        awaySeconds,
         redirectCountRef.current,
       );
     }
@@ -264,7 +292,6 @@ export function ScenarioPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [blob]);
 
-  // ── Choice handler ────────────────────────────────────────────────────────
   const handleChoice = useCallback(
     async (choiceId: string) => {
       if (!sessionId || !step || isEvaluating) return;
@@ -341,11 +368,7 @@ export function ScenarioPage() {
   return (
     <div className="min-h-screen bg-hoovy-bg px-4 py-6 font-friendly flex flex-col max-w-xl mx-auto gap-5">
       {/* Dev gaze HUD */}
-      <GazeMonitor
-        gazePosition={gazePosition}
-        currentlyOnScreen={currentlyOnScreen}
-        offScreenSeconds={offScreenSeconds}
-      />
+      <GazeMonitor facePresent={facePresent} awaySeconds={awaySeconds} />
 
       {/* Modals */}
       {showNameModal && (
@@ -381,7 +404,7 @@ export function ScenarioPage() {
         </div>
       )}
 
-      {/* Back + title */}
+      {/* Back + title + gaze status */}
       <div className="flex items-center gap-3">
         <button
           onClick={() => navigate("/")}
@@ -392,6 +415,13 @@ export function ScenarioPage() {
         <h1 className="font-extrabold text-xl text-gray-800 truncate flex-1">
           {scenario.title}
         </h1>
+        <GazePill
+          status={gazeStatus}
+          hasSample={gazeHasSample}
+          facePresent={facePresent}
+          awaySeconds={awaySeconds}
+          errorMessage={gazeError}
+        />
       </div>
 
       {/* Progress */}

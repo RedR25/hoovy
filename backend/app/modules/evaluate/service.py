@@ -15,7 +15,7 @@ import tempfile
 from pathlib import Path
 
 from app.core.config import get_settings
-from app.modules.evaluate.audio import convert_to_wav_16k_mono
+from app.modules.evaluate.audio import convert_to_wav_16k_mono, is_silent
 from app.modules.evaluate.schemas import EvaluateChoiceRequest, EvaluateResponse, EvaluationResult
 from app.modules.scenarios.schemas import ScenarioStep
 from app.modules.scenarios.service import ScenarioService
@@ -53,17 +53,27 @@ _MOCK_WRONG = EvaluationResult(
 # Shared helpers
 # ---------------------------------------------------------------------------
 
-def _pick_feedback_text(step: ScenarioStep, is_correct: bool, attempts_remaining: int, fallback: str) -> str:
+def _pick_feedback_text(
+    step: ScenarioStep,
+    is_correct: bool,
+    attempts_remaining: int,
+    fallback: str,
+    *,
+    no_input: bool = False,
+) -> str:
     """Return appropriate feedback text for a step evaluation result.
 
-    Shared between audio and choice paths so the wording is consistent.
+    `no_input=True` means the kid produced silence / unintelligible audio —
+    we prefer the dynamic fallback ("I didn't hear anything...") over the
+    canned step hint, because the static hint assumes a wrong-but-real answer.
     """
     if is_correct:
         return step.praise_on_correct or fallback
-    elif attempts_remaining > 0:
+    if no_input:
+        return fallback or "I didn't hear anything. Try again."
+    if attempts_remaining > 0:
         return step.hint_on_wrong or fallback
-    else:
-        return "That's okay! Let's try the next one."
+    return "That's okay! Let's try the next one."
 
 
 class EvaluateService(BaseService):
@@ -97,7 +107,22 @@ class EvaluateService(BaseService):
         attempts_remaining = max(0, max_attempts - attempt_number)
         advance = result.is_correct or attempts_remaining == 0
 
-        feedback_text = _pick_feedback_text(step, result.is_correct, attempts_remaining, result.feedback)
+        # "No input" — silence guard tripped or transcript came back empty.
+        # The static step hint assumes a wrong-but-real answer, so we prefer
+        # the dynamic feedback ("I didn't hear anything…") for this case.
+        no_input = (
+            not result.is_correct
+            and len(result.transcript.strip()) == 0
+            and response_type == "voice"
+        )
+
+        feedback_text = _pick_feedback_text(
+            step,
+            result.is_correct,
+            attempts_remaining,
+            result.feedback,
+            no_input=no_input,
+        )
 
         await self.session_service.log_trial(
             session_id=session_id,
@@ -149,6 +174,16 @@ class EvaluateService(BaseService):
 
         if settings.mock_ai:
             result = _MOCK_CORRECT if attempt_number % 2 == 1 else _MOCK_WRONG
+        elif is_silent(audio_bytes, source_format):
+            # Short-circuit silence so Gemma can't hallucinate a positive
+            # response under format="json".
+            print("[evaluate] clip detected as silent — skipping Gemma call")
+            result = EvaluationResult(
+                transcript="",
+                is_correct=False,
+                confidence=0.0,
+                feedback="I didn't hear anything. Try saying it again.",
+            )
         else:
             wav_bytes = convert_to_wav_16k_mono(audio_bytes, source_format)
 
@@ -191,6 +226,20 @@ class EvaluateService(BaseService):
                 try:
                     data = json.loads(raw)
                     result = EvaluationResult(**data)
+                    # Guard against hallucinated correctness on empty/very-short
+                    # transcripts: if Gemma claims is_correct but transcribed
+                    # nothing meaningful, override to wrong with a hint.
+                    if result.is_correct and len(result.transcript.strip()) < 2:
+                        print(
+                            "[evaluate] Gemma claimed correct on empty transcript "
+                            f"— overriding. raw={raw!r}"
+                        )
+                        result = EvaluationResult(
+                            transcript=result.transcript,
+                            is_correct=False,
+                            confidence=0.0,
+                            feedback="I couldn't hear you clearly. Try again.",
+                        )
                 except Exception:
                     result = _FALLBACK_RESULT
             finally:

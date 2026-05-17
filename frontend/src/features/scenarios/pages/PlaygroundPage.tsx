@@ -68,6 +68,8 @@ export function PlaygroundPage() {
                 // on this page so the first record→eval call doesn't pay the
                 // cold-start cost (~10–15s).
                 axios.post("/api/v1/warmup").catch(() => {});
+                // The click itself feeds WebGazer (via its global click listener)
+                // as a calibration sample — the kid was looking at the card.
                 navigate(`/scenario/${id}`);
               }}
             />

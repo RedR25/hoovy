@@ -1,3 +1,5 @@
+import app.core.hf_bootstrap  # noqa: F401  # MUST be first — sets HF env before any model lib loads
+
 import asyncio
 from contextlib import asynccontextmanager
 
