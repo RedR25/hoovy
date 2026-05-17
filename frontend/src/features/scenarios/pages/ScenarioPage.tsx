@@ -494,15 +494,79 @@ export function ScenarioPage() {
           );
         })()}
 
-        {/* Hint image — small inline */}
+        {/* Hint — modal pop-up over the whole viewport */}
         {showHint && step.hint_image_url && (
-          <div className="w-full max-h-20 rounded-xl overflow-hidden border-[3px] border-hoovy-yellow shadow-[0_3px_0_#D98A1C] flex-shrink-0">
-            <img src={step.hint_image_url} alt="hint" className="w-full h-20 object-cover" />
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-sm px-4 animate-[hoovy-fade_180ms_ease-out]"
+            onClick={() => setShowHint(false)}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Hint"
+          >
+            <div
+              className="relative w-full max-w-md bg-white rounded-3xl p-4 border-[6px] border-hoovy-yellow shadow-[0_10px_0_#D98A1C,0_20px_40px_rgba(0,0,0,0.25)] animate-[hoovy-pop_220ms_cubic-bezier(.2,.9,.3,1.3)]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header chip */}
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 inline-flex items-center gap-2 bg-hoovy-yellow text-hoovy-navy text-xs font-extrabold uppercase tracking-wide px-4 py-1.5 rounded-full border-[3px] border-white shadow-[0_3px_0_#D98A1C]">
+                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 18h6" />
+                  <path d="M10 22h4" />
+                  <path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z" />
+                </svg>
+                Hint
+              </div>
+
+              {/* Close X */}
+              <button
+                onClick={() => setShowHint(false)}
+                aria-label="Close hint"
+                className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white border-[3px] border-hoovy-navy/15 shadow-[0_3px_0_rgba(0,0,0,0.1)] flex items-center justify-center text-hoovy-navy active:translate-y-[3px] active:!shadow-none transition-all"
+              >
+                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                </svg>
+              </button>
+
+              {/* Image */}
+              <div className="mt-4 w-full aspect-[4/3] rounded-2xl overflow-hidden border-[4px] border-white shadow-[0_4px_0_rgba(0,0,0,0.08)]">
+                <img
+                  src={step.hint_image_url}
+                  alt="Hint"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              {/* Hint text */}
+              {step.hint_on_wrong && (
+                <p className="mt-3 text-center text-sm font-extrabold text-hoovy-navy leading-snug">
+                  {step.hint_on_wrong}
+                </p>
+              )}
+
+              {/* CTA */}
+              <button
+                onClick={() => setShowHint(false)}
+                className="mt-4 w-full py-3 rounded-full bg-hoovy-green text-white font-extrabold text-base border-[4px] border-white shadow-[0_5px_0_#2A9038] active:translate-y-[5px] active:!shadow-none transition-all"
+              >
+                Got it!
+              </button>
+            </div>
+
+            <style>{`
+              @keyframes hoovy-fade { from { opacity: 0 } to { opacity: 1 } }
+              @keyframes hoovy-pop {
+                0%   { transform: scale(0.85); opacity: 0 }
+                100% { transform: scale(1);    opacity: 1 }
+              }
+            `}</style>
           </div>
         )}
 
-        {/* Speech bubble — 3D, compact */}
-        <div className="relative bg-white rounded-2xl px-3 py-2 flex items-start gap-2 border-[4px] border-hoovy-sky shadow-[0_4px_0_#1C86D9] flex-shrink-0">
+        {/* Speech bubble — fixed 3-line height so swapping prompt↔feedback
+            text never resizes the row. */}
+        <div className="relative bg-white rounded-2xl px-3 py-2 flex items-start gap-2 border-[4px] border-hoovy-sky shadow-[0_4px_0_#1C86D9] flex-shrink-0 min-h-[68px]">
           <span
             className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-hoovy-sky text-white flex-shrink-0 border-[2px] border-white"
           >
@@ -517,75 +581,97 @@ export function ScenarioPage() {
         </div>
 
 
-        {/* Feedback chip */}
-        {feedback && (
+        {/* Choice tiles — ALWAYS mounted while choices exist; only the interactivity
+            changes. No remount = no layout shift between idle / recording / eval / feedback. */}
+        {showChoices && (
           <div
-            className={`px-4 py-1.5 rounded-full font-extrabold text-sm text-center self-center border-[3px] border-white flex-shrink-0 ${
-              feedback.isCorrect
-                ? "bg-hoovy-green text-white shadow-[0_3px_0_#2A9038]"
-                : "bg-hoovy-yellow text-hoovy-navy shadow-[0_3px_0_#D98A1C]"
+            className={`flex gap-2 overflow-x-auto pb-1 -mx-3 px-3 flex-shrink-0 transition-opacity duration-150 ${
+              !micEnabled || isPlaying || isEvaluating || feedback ? "opacity-60" : "opacity-100"
             }`}
           >
-            {feedback.isCorrect ? "Great job!" : "Keep trying!"}
-          </div>
-        )}
-
-        {/* Choice tiles — horizontal scroll, fixed height */}
-        {showChoices && !isEvaluating && (
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-3 px-3 flex-shrink-0">
             {step.choices.map((choice) => (
               <ChoiceTile
                 key={choice.id}
                 choice={choice}
-                disabled={!micEnabled || isPlaying || isEvaluating}
+                disabled={!micEnabled || isPlaying || isEvaluating || !!feedback}
                 onSelect={handleChoice}
               />
             ))}
           </div>
         )}
 
-        {/* Evaluating indicator */}
-        {isEvaluating && (
-          <div className="flex items-center justify-center gap-2 py-2 rounded-full bg-hoovy-purple/15 border-[3px] border-hoovy-purple text-hoovy-purple font-extrabold text-xs flex-shrink-0">
-            <div className="w-2.5 h-2.5 rounded-full bg-hoovy-purple animate-ping" />
-            Teacher is listening...
-          </div>
-        )}
+        {/* Action button — ALWAYS rendered when mic flow is allowed.
+            Its content morphs (mic / recording / listening / feedback) without
+            remounting, so the bottom anchor never moves. */}
+        {showMic && (() => {
+          const state: "idle" | "recording" | "evaluating" | "correct" | "wrong" =
+            feedback?.isCorrect ? "correct"
+            : feedback ? "wrong"
+            : isEvaluating ? "evaluating"
+            : isRecording ? "recording"
+            : "idle";
 
-        {/* "I want to say it!" mic button — 3D green, compact */}
-        {showMic && !isEvaluating && (
-          <button
-            onClick={handleMicToggle}
-            disabled={!micEnabled || isPlaying}
-            className={[
-              "w-full rounded-full py-3 px-4 font-extrabold text-base text-white flex-shrink-0",
-              "border-[4px] border-white transition-all duration-100",
-              "flex items-center justify-center gap-2",
-              "active:translate-y-[5px] active:!shadow-none",
-              isRecording
-                ? "bg-hoovy-pink shadow-[0_5px_0_#D93D55] animate-pulse"
-                : "bg-hoovy-green shadow-[0_5px_0_#2A9038]",
-              (!micEnabled || isPlaying) ? "opacity-50 cursor-not-allowed" : "",
-            ].join(" ")}
-          >
-            <span
-              className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white/25 border-[2px] border-white/50"
+          const palette: Record<typeof state, string> = {
+            idle:       "bg-hoovy-green shadow-[0_5px_0_#2A9038]",
+            recording:  "bg-hoovy-pink shadow-[0_5px_0_#D93D55] animate-pulse",
+            evaluating: "bg-hoovy-purple shadow-[0_5px_0_#6B3FA8]",
+            correct:    "bg-hoovy-green shadow-[0_5px_0_#2A9038]",
+            wrong:      "bg-hoovy-yellow text-hoovy-navy shadow-[0_5px_0_#D98A1C]",
+          };
+
+          const isInteractive = state === "idle" || state === "recording";
+
+          return (
+            <button
+              onClick={handleMicToggle}
+              disabled={!isInteractive || !micEnabled || isPlaying}
+              className={[
+                "w-full rounded-full py-3 px-4 font-extrabold text-base text-white flex-shrink-0",
+                "border-[4px] border-white transition-all duration-150",
+                "flex items-center justify-center gap-2",
+                isInteractive ? "active:translate-y-[5px] active:!shadow-none" : "",
+                palette[state],
+                state === "wrong" ? "" : "text-white",
+                !isInteractive ? "cursor-default" : (!micEnabled || isPlaying) ? "opacity-60 cursor-not-allowed" : "",
+              ].join(" ")}
             >
-              {isRecording ? (
-                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="white">
-                  <rect x="6" y="6" width="12" height="12" rx="2" />
-                </svg>
-              ) : (
-                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="white">
-                  <rect x="9" y="3" width="6" height="12" rx="3" />
-                  <path d="M5 11v1a7 7 0 0 0 14 0v-1" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" />
-                  <line x1="12" y1="19" x2="12" y2="22" stroke="white" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-              )}
-            </span>
-            {isRecording ? "Tap to stop" : "I want to say it!"}
-          </button>
-        )}
+              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white/25 border-[2px] border-white/50">
+                {state === "recording" && (
+                  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="white">
+                    <rect x="6" y="6" width="12" height="12" rx="2" />
+                  </svg>
+                )}
+                {state === "evaluating" && (
+                  <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                )}
+                {state === "correct" && (
+                  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="5 12 10 17 19 7" />
+                  </svg>
+                )}
+                {state === "wrong" && (
+                  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 9v4" />
+                    <circle cx="12" cy="17" r="0.5" fill="currentColor" />
+                    <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+                  </svg>
+                )}
+                {state === "idle" && (
+                  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="white">
+                    <rect x="9" y="3" width="6" height="12" rx="3" />
+                    <path d="M5 11v1a7 7 0 0 0 14 0v-1" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                    <line x1="12" y1="19" x2="12" y2="22" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                )}
+              </span>
+              {state === "recording"  && "Tap to stop"}
+              {state === "evaluating" && "Teacher is listening..."}
+              {state === "correct"    && "Great job!"}
+              {state === "wrong"      && "Keep trying!"}
+              {state === "idle"       && "I want to say it!"}
+            </button>
+          );
+        })()}
 
         {/* Tap-only fallback */}
         {effectiveResponseType === "tap" && (
