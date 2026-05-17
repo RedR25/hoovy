@@ -16,7 +16,6 @@ export interface ScenarioStep {
   id: string;
   order: number;
   teacher_prompt: string;
-  teacher_prompt_vi: string;
   scene_image_url: string | null;
   scene_image_prompt: string | null;
   response_type: ResponseType;
@@ -31,29 +30,30 @@ export interface ScenarioStep {
 export interface Scenario {
   id: string;
   title: string;
-  title_vi: string;
   skill_domain: SkillDomain;
   difficulty: number;
   thumbnail_url: string | null;
   estimated_minutes: number;
   language: string;
+  child_interests: string | null;
   steps: ScenarioStep[];
 }
 
 export interface ScenarioSummary {
   id: string;
   title: string;
-  title_vi: string;
   skill_domain: SkillDomain;
   difficulty: number;
   thumbnail_url: string | null;
   estimated_minutes: number;
   language: string;
+  child_interests: string | null;
 }
 
 export interface SessionRead {
   id: string;
   scenario_id: string;
+  kid_id: string | null;
   kid_name: string | null;
   language: string;
   started_at: string;

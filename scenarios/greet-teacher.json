@@ -1,18 +1,17 @@
 {
   "id": "greet-teacher",
   "title": "Greeting the teacher",
-  "title_vi": "Chào cô giáo",
   "skill_domain": "communication",
   "difficulty": 1,
   "thumbnail_url": "/static/images/greet-teacher/thumb.png",
   "estimated_minutes": 3,
   "language": "en",
+  "child_interests": null,
   "steps": [
     {
       "id": "step-1",
       "order": 1,
       "teacher_prompt": "Hi there! My name is Ms. Linh. Can you say hello back to me?",
-      "teacher_prompt_vi": "Chào con! Cô tên là Linh. Con hãy chào cô đi.",
       "scene_image_url": "/static/images/greet-teacher/step-1.png",
       "scene_image_prompt": "A friendly kindergarten teacher waving warmly, soft warm pastel colors, cartoon kid-friendly illustration, plain pastel background, diverse appearance, no text",
       "response_type": "voice_or_choice",
@@ -31,7 +30,6 @@
       "id": "step-2",
       "order": 2,
       "teacher_prompt": "Wonderful! Now tell me your name. You can say, 'My name is...'",
-      "teacher_prompt_vi": "Tuyệt vời! Bây giờ con hãy nói tên của con. Con có thể nói: 'Tên con là...'",
       "scene_image_url": "/static/images/greet-teacher/step-2.png",
       "scene_image_prompt": "Friendly teacher leaning down with a kind smile, listening attentively, soft warm pastel colors, cartoon kid-friendly illustration, plain pastel background, no text",
       "response_type": "voice",
@@ -46,7 +44,6 @@
       "id": "step-3",
       "order": 3,
       "teacher_prompt": "Class is over for today. How do we say goodbye to our teacher?",
-      "teacher_prompt_vi": "Hôm nay học xong rồi. Mình chào tạm biệt cô giáo thế nào?",
       "scene_image_url": "/static/images/greet-teacher/step-3.png",
       "scene_image_prompt": "Friendly teacher waving goodbye warmly at the end of class, soft warm pastel colors, cartoon kid-friendly illustration, plain pastel background, no text",
       "response_type": "voice_or_choice",
@@ -58,8 +55,7 @@
       "voice_accepts": ["goodbye", "bye", "see you", "see you later", "bye bye"],
       "hint_on_wrong": "When we leave, we say 'Goodbye' or 'Bye'. Try again.",
       "hint_image_url": "/static/images/greet-teacher/step-3-hint.png",
-      "praise_on_correct": "Perfect! See you next time.",
-      "max_attempts": 3
+      "praise_on_correct": "Perfect! See you next time."
     }
   ]
 }

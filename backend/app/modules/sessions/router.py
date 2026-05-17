@@ -14,7 +14,12 @@ router = APIRouter(prefix="/sessions", tags=["sessions"])
 
 @router.post("", response_model=SessionRead, status_code=status.HTTP_201_CREATED)
 async def create_session(payload: SessionCreate, service: SessionServiceDep) -> SessionRead:
-    session = await service.create(payload.scenario_id, payload.kid_name, payload.language)
+    session = await service.create(
+        scenario_id=payload.scenario_id,
+        kid_name=payload.kid_name,
+        language=payload.language,
+        kid_id=payload.kid_id,
+    )
     return SessionRead.model_validate(session)
 
 

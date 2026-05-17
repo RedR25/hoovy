@@ -4,6 +4,7 @@ export const userSchema = z.object({
   id: z.string().uuid(),
   email: z.string().email(),
   full_name: z.string().nullable(),
+  role: z.string().default("parent"),
   is_active: z.boolean(),
   created_at: z.string(),
 });

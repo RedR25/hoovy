@@ -18,8 +18,19 @@ class SessionService(BaseService):
         self.trial_repo = trial_repo
         self.attention_repo = attention_repo
 
-    async def create(self, scenario_id: str, kid_name: str | None, language: str) -> Session:
-        session = Session(scenario_id=scenario_id, kid_name=kid_name, language=language)
+    async def create(
+        self,
+        scenario_id: str,
+        kid_name: str | None,
+        language: str,
+        kid_id: str | None = None,
+    ) -> Session:
+        session = Session(
+            scenario_id=scenario_id,
+            kid_id=kid_id,
+            kid_name=kid_name,
+            language=language,
+        )
         return await self.session_repo.add(session)
 
     async def get(self, session_id: str) -> Session:

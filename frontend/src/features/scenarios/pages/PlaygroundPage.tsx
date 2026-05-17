@@ -3,11 +3,17 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useScenariosList } from "@/features/scenarios/hooks";
 import { ScenarioCard } from "@/features/scenarios/components/ScenarioCard";
+import { useAuth } from "@/features/auth/AuthProvider";
+import { useActiveKid, useMyKids } from "@/features/kids/hooks";
 
 export function PlaygroundPage() {
   const navigate = useNavigate();
   const { data: scenarios, isLoading, isError } = useScenariosList();
   const [isMockMode, setIsMockMode] = useState(false);
+  const { isAuthenticated, logout } = useAuth();
+  const { activeKidId } = useActiveKid();
+  const { data: kids } = useMyKids();
+  const activeKid = kids?.find((k) => k.id === activeKidId);
 
   // Check whether backend is running in mock mode once on mount.
   useEffect(() => {
@@ -27,6 +33,45 @@ export function PlaygroundPage() {
           DEMO MOCK MODE — AI responses are canned.
         </div>
       )}
+
+      {/* Top nav */}
+      <nav className="max-w-2xl mx-auto flex items-center justify-between mb-6 text-sm">
+        <button
+          onClick={() => navigate("/kids")}
+          className="font-bold text-gray-600 hover:text-hoovy-blue"
+        >
+          {activeKid ? `${activeKid.avatar_emoji} ${activeKid.display_name}` : "Pick a kid"}
+        </button>
+        <div className="flex gap-4">
+          {isAuthenticated && (
+            <>
+              <button
+                onClick={() => navigate("/progress")}
+                className="font-bold text-gray-600 hover:text-hoovy-blue"
+              >
+                Progress
+              </button>
+              <button
+                onClick={() => navigate("/author?admin=1")}
+                className="font-bold text-gray-600 hover:text-hoovy-blue"
+              >
+                Build scenario
+              </button>
+              <button onClick={logout} className="font-bold text-gray-400 hover:text-gray-700">
+                Sign out
+              </button>
+            </>
+          )}
+          {!isAuthenticated && (
+            <button
+              onClick={() => navigate("/login")}
+              className="font-bold text-hoovy-blue"
+            >
+              Parent sign in
+            </button>
+          )}
+        </div>
+      </nav>
 
       {/* Header */}
       <header className="text-center mb-10">

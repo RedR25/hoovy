@@ -1,11 +1,21 @@
-import type { SkillDomain } from "@/features/scenarios/types";
+import type { Scenario, SkillDomain } from "@/features/scenarios/types";
 
 export type { SkillDomain };
+export type Complexity = "low" | "med" | "high";
 
 export interface AuthorRequest {
+  skill_target: string;
+  child_interests: string;
+  complexity: Complexity;
   skill_domain: SkillDomain;
-  brief: string;
-  difficulty: 1 | 2 | 3;
   num_steps: 1 | 2 | 3 | 4 | 5;
-  language: "en" | "vi";
+}
+
+export interface DraftResponse {
+  draft_id: string;
+  scenario: Scenario;
+}
+
+export interface PublishRequest {
+  draft_id: string;
 }

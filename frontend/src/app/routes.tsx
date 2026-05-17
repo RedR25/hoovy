@@ -6,6 +6,8 @@ import { RequireAuth } from "@/features/auth/RequireAuth";
 import { PlaygroundPage } from "@/features/scenarios/pages/PlaygroundPage";
 import { ScenarioPage } from "@/features/scenarios/pages/ScenarioPage";
 import { AuthorPage } from "@/features/author/pages/AuthorPage";
+import { KidsPage } from "@/features/kids/pages/KidsPage";
+import { ProgressPage } from "@/features/progress/pages/ProgressPage";
 
 export const AppRoutes = () => (
   <Routes>
@@ -14,6 +16,22 @@ export const AppRoutes = () => (
     <Route path="/author" element={<AuthorPage />} />
     <Route path="/login" element={<LoginPage />} />
     <Route path="/register" element={<RegisterPage />} />
+    <Route
+      path="/kids"
+      element={
+        <RequireAuth>
+          <KidsPage />
+        </RequireAuth>
+      }
+    />
+    <Route
+      path="/progress"
+      element={
+        <RequireAuth>
+          <ProgressPage />
+        </RequireAuth>
+      }
+    />
     <Route
       path="/me"
       element={

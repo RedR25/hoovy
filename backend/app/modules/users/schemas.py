@@ -8,6 +8,7 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
     full_name: str | None = None
+    role: str = "parent"  # parents register themselves; kids are managed via /kids
 
 
 class UserRead(BaseModel):
@@ -16,6 +17,7 @@ class UserRead(BaseModel):
     id: UUID
     email: EmailStr
     full_name: str | None
+    role: str
     is_active: bool
     created_at: datetime
 

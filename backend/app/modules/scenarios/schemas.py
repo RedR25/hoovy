@@ -20,7 +20,7 @@ class ScenarioStep(BaseModel):
     id: str
     order: int
     teacher_prompt: str
-    teacher_prompt_vi: str
+    teacher_prompt_vi: str | None = None  # legacy; ignored
     scene_image_url: str | None = None
     scene_image_prompt: str | None = None
     response_type: ResponseType
@@ -35,21 +35,23 @@ class ScenarioStep(BaseModel):
 class Scenario(BaseModel):
     id: str
     title: str
-    title_vi: str
+    title_vi: str | None = None  # legacy
     skill_domain: SkillDomain
     difficulty: int
     thumbnail_url: str | None = None
     estimated_minutes: int
-    language: str
+    language: str = "en"
     steps: list[ScenarioStep]
+    child_interests: str | None = None  # new: themed scenarios
 
 
 class ScenarioSummary(BaseModel):
     id: str
     title: str
-    title_vi: str
+    title_vi: str | None = None  # legacy
     skill_domain: SkillDomain
     difficulty: int
     thumbnail_url: str | None = None
     estimated_minutes: int
-    language: str
+    language: str = "en"
+    child_interests: str | None = None

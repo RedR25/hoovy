@@ -114,11 +114,13 @@ export function ScenarioPage() {
     if (!scenarioId) return;
 
     const kidName = localStorage.getItem("hoovy_kid_name") || "Anonymous";
+    const kidId = localStorage.getItem("hoovy.active_kid_id");
     let createdId: string | null = null;
 
     axios
       .post<SessionRead>("/api/v1/sessions", {
         scenario_id: scenarioId,
+        kid_id: kidId,
         kid_name: kidName,
         language: "en",
       })

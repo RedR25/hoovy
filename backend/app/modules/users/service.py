@@ -19,6 +19,7 @@ class UserService(BaseService):
             email=data.email,
             full_name=data.full_name,
             hashed_password=hash_password(data.password),
+            role=data.role or "parent",
         )
         return await self.repo.add(user)
 

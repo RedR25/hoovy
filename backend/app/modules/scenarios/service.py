@@ -39,12 +39,12 @@ class ScenarioService:
             ScenarioSummary(
                 id=s.id,
                 title=s.title,
-                title_vi=s.title_vi,
                 skill_domain=s.skill_domain,
                 difficulty=s.difficulty,
                 thumbnail_url=s.thumbnail_url,
                 estimated_minutes=s.estimated_minutes,
                 language=s.language,
+                child_interests=s.child_interests,
             )
             for s in self._get_cache().values()
         ]

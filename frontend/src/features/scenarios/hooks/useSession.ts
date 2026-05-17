@@ -19,10 +19,12 @@ export function useSession(scenarioId: string): UseSessionReturn {
 
     const kidName =
       localStorage.getItem("hoovy_kid_name") || "Anonymous";
+    const kidId = localStorage.getItem("hoovy.active_kid_id");
 
     axios
       .post<SessionRead>("/api/v1/sessions", {
         scenario_id: scenarioId,
+        kid_id: kidId,
         kid_name: kidName,
         language: "en",
       })
