@@ -14,6 +14,20 @@
   #root {
     @apply min-h-screen;
   }
+
+  /* Hide the native scrollbar everywhere — we render our own React-driven
+     scrollbar (see CustomScrollbar.tsx). DO NOT add ::-webkit-scrollbar
+     styling here; the user has explicitly asked for a 100% custom track. */
+  html {
+    scrollbar-width: none;       /* Firefox */
+    -ms-overflow-style: none;    /* legacy Edge / IE */
+  }
+  *::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    background: transparent;
+    display: none;
+  }
 }
 
 /* WebGazer DOM — kill the camera preview, face overlays, and gaze dot.

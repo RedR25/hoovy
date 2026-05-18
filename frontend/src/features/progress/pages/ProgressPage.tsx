@@ -78,7 +78,7 @@ export function ProgressPage() {
   const navigate = useNavigate();
 
   return (
-    <SceneBackdrop variant="rainbow" scenery={false}>
+    <SceneBackdrop variant="meadow">
       <div className="min-h-screen flex flex-col">
         {/* Header */}
         <header className="px-4 pt-6 pb-3 flex items-center gap-3 max-w-md w-full mx-auto">
