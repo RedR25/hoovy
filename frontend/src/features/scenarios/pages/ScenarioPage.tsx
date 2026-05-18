@@ -361,7 +361,7 @@ export function ScenarioPage() {
     (step.choices?.length ?? 0) > 0;
 
   return (
-    <SceneBackdrop variant="soft">
+    <SceneBackdrop variant="meadow">
       {/* Dev gaze HUD */}
       <GazeMonitor facePresent={facePresent} awaySeconds={awaySeconds} />
 
@@ -410,11 +410,8 @@ export function ScenarioPage() {
           <ScoreBadge score={12} />
         </header>
 
-        {/* Title + gaze pill */}
-        <div className="flex items-center justify-between flex-shrink-0">
-          <h1 className="font-extrabold text-sm text-hoovy-navy/80 truncate" style={{ fontFamily: 'Fredoka' }}>
-            {scenario.title}
-          </h1>
+        {/* GazePill floats absolutely so it doesn't claim its own row */}
+        <div className="fixed top-3 right-3 z-30">
           <GazePill
             status={gazeStatus}
             hasSample={gazeHasSample}
@@ -580,12 +577,11 @@ export function ScenarioPage() {
           </p>
         </div>
 
-
-        {/* Choice tiles — ALWAYS mounted while choices exist; only the interactivity
-            changes. No remount = no layout shift between idle / recording / eval / feedback. */}
+        {/* Choice tiles — equal-width 3-column grid. ALWAYS mounted while choices
+            exist; only the interactivity changes. No remount = no layout shift. */}
         {showChoices && (
           <div
-            className={`flex gap-2 overflow-x-auto pb-1 -mx-3 px-3 flex-shrink-0 transition-opacity duration-150 ${
+            className={`grid grid-cols-3 gap-2 flex-shrink-0 transition-opacity duration-150 ${
               !micEnabled || isPlaying || isEvaluating || feedback ? "opacity-60" : "opacity-100"
             }`}
           >
