@@ -3,7 +3,7 @@
   "title": "Sharing toys with a friend",
   "skill_domain": "social",
   "difficulty": 2,
-  "thumbnail_url": null,
+  "thumbnail_url": "/static/images/sharing-toys/thumb.png",
   "estimated_minutes": 3,
   "language": "en",
   "child_interests": null,
@@ -12,15 +12,33 @@
       "id": "step-1",
       "order": 1,
       "teacher_prompt": "Your friend wants to play with your toy truck. What do you say?",
-      "scene_image_url": null,
+      "scene_image_url": "/static/images/sharing-toys/step-1.png",
       "scene_image_prompt": "Hoovy the otter holding a red toy truck while another smiling kid looks on hopefully, pastel playroom",
       "response_type": "voice_or_choice",
       "choices": [
-        { "id": "a", "text": "Sure, here you go!", "is_correct": true },
-        { "id": "b", "text": "No, it's mine!", "is_correct": false },
-        { "id": "c", "text": "Go away.", "is_correct": false }
+        {
+          "id": "a",
+          "text": "Sure, here you go!",
+          "is_correct": true
+        },
+        {
+          "id": "b",
+          "text": "No, it's mine!",
+          "is_correct": false
+        },
+        {
+          "id": "c",
+          "text": "Go away.",
+          "is_correct": false
+        }
       ],
-      "voice_accepts": ["sure", "yes", "here you go", "okay", "of course"],
+      "voice_accepts": [
+        "sure",
+        "yes",
+        "here you go",
+        "okay",
+        "of course"
+      ],
       "hint_on_wrong": "Sharing makes friends happy. Try saying 'Sure, here you go!'",
       "hint_image_url": null,
       "praise_on_correct": "That's so kind! Sharing is caring.",
@@ -30,15 +48,32 @@
       "id": "step-2",
       "order": 2,
       "teacher_prompt": "You both want to play with the truck. What should you do?",
-      "scene_image_url": null,
+      "scene_image_url": "/static/images/sharing-toys/step-2.png",
       "scene_image_prompt": "Hoovy the otter and a friend sitting on a soft rug taking turns pushing a toy truck, pastel playroom",
       "response_type": "voice_or_choice",
       "choices": [
-        { "id": "a", "text": "Take turns playing", "is_correct": true },
-        { "id": "b", "text": "Grab it back", "is_correct": false },
-        { "id": "c", "text": "Run away with it", "is_correct": false }
+        {
+          "id": "a",
+          "text": "Take turns playing",
+          "is_correct": true
+        },
+        {
+          "id": "b",
+          "text": "Grab it back",
+          "is_correct": false
+        },
+        {
+          "id": "c",
+          "text": "Run away with it",
+          "is_correct": false
+        }
       ],
-      "voice_accepts": ["take turns", "share", "we take turns", "take turn"],
+      "voice_accepts": [
+        "take turns",
+        "share",
+        "we take turns",
+        "take turn"
+      ],
       "hint_on_wrong": "Friends take turns so everyone has fun.",
       "hint_image_url": null,
       "praise_on_correct": "Yes! Taking turns is super fair.",
@@ -48,15 +83,32 @@
       "id": "step-3",
       "order": 3,
       "teacher_prompt": "Your friend says 'Thank you for sharing!' What do you say back?",
-      "scene_image_url": null,
+      "scene_image_url": "/static/images/sharing-toys/step-3.png",
       "scene_image_prompt": "Hoovy the otter smiling at a friend after sharing a toy, both wave happily, pastel playroom",
       "response_type": "voice_or_choice",
       "choices": [
-        { "id": "a", "text": "You're welcome!", "is_correct": true },
-        { "id": "b", "text": "Give it back.", "is_correct": false },
-        { "id": "c", "text": "(say nothing)", "is_correct": false }
+        {
+          "id": "a",
+          "text": "You're welcome!",
+          "is_correct": true
+        },
+        {
+          "id": "b",
+          "text": "Give it back.",
+          "is_correct": false
+        },
+        {
+          "id": "c",
+          "text": "(say nothing)",
+          "is_correct": false
+        }
       ],
-      "voice_accepts": ["you're welcome", "youre welcome", "welcome", "no problem"],
+      "voice_accepts": [
+        "you're welcome",
+        "youre welcome",
+        "welcome",
+        "no problem"
+      ],
       "hint_on_wrong": "When someone thanks you, say 'You're welcome!'",
       "hint_image_url": null,
       "praise_on_correct": "Lovely manners!"

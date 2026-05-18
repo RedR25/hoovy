@@ -3,7 +3,7 @@
   "title": "Bedtime routine",
   "skill_domain": "time",
   "difficulty": 1,
-  "thumbnail_url": null,
+  "thumbnail_url": "/static/images/bedtime-routine/thumb.png",
   "estimated_minutes": 3,
   "language": "en",
   "child_interests": null,
@@ -12,15 +12,32 @@
       "id": "step-1",
       "order": 1,
       "teacher_prompt": "It's eight o'clock. Time for bed! What do you do first?",
-      "scene_image_url": null,
+      "scene_image_url": "/static/images/bedtime-routine/step-1.png",
       "scene_image_prompt": "Hoovy the otter looking at a wall clock showing 8 o'clock, cozy pastel bedroom",
       "response_type": "voice_or_choice",
       "choices": [
-        { "id": "a", "text": "Brush my teeth", "is_correct": true },
-        { "id": "b", "text": "Watch more TV", "is_correct": false },
-        { "id": "c", "text": "Eat candy", "is_correct": false }
+        {
+          "id": "a",
+          "text": "Brush my teeth",
+          "is_correct": true
+        },
+        {
+          "id": "b",
+          "text": "Watch more TV",
+          "is_correct": false
+        },
+        {
+          "id": "c",
+          "text": "Eat candy",
+          "is_correct": false
+        }
       ],
-      "voice_accepts": ["brush", "brush my teeth", "teeth", "brush teeth"],
+      "voice_accepts": [
+        "brush",
+        "brush my teeth",
+        "teeth",
+        "brush teeth"
+      ],
       "hint_on_wrong": "Before bed we brush our teeth so they stay healthy.",
       "hint_image_url": null,
       "praise_on_correct": "Good thinking! Clean teeth make happy mornings.",
@@ -30,15 +47,32 @@
       "id": "step-2",
       "order": 2,
       "teacher_prompt": "Teeth are clean. What's next in the bedtime routine?",
-      "scene_image_url": null,
+      "scene_image_url": "/static/images/bedtime-routine/step-2.png",
       "scene_image_prompt": "Hoovy the otter standing in front of a cozy bed with pajamas folded on top, soft warm lamp light",
       "response_type": "voice_or_choice",
       "choices": [
-        { "id": "a", "text": "Put on pajamas", "is_correct": true },
-        { "id": "b", "text": "Run outside", "is_correct": false },
-        { "id": "c", "text": "Play video games", "is_correct": false }
+        {
+          "id": "a",
+          "text": "Put on pajamas",
+          "is_correct": true
+        },
+        {
+          "id": "b",
+          "text": "Run outside",
+          "is_correct": false
+        },
+        {
+          "id": "c",
+          "text": "Play video games",
+          "is_correct": false
+        }
       ],
-      "voice_accepts": ["pajamas", "put on pajamas", "pjs", "change clothes"],
+      "voice_accepts": [
+        "pajamas",
+        "put on pajamas",
+        "pjs",
+        "change clothes"
+      ],
       "hint_on_wrong": "Pajamas keep us cozy for sleep.",
       "hint_image_url": null,
       "praise_on_correct": "Right! Soft and cozy.",
@@ -48,15 +82,31 @@
       "id": "step-3",
       "order": 3,
       "teacher_prompt": "All ready for bed. What do you say to your family?",
-      "scene_image_url": null,
+      "scene_image_url": "/static/images/bedtime-routine/step-3.png",
       "scene_image_prompt": "Hoovy the otter tucked into bed waving sleepily to family in the doorway, warm bedroom light",
       "response_type": "voice_or_choice",
       "choices": [
-        { "id": "a", "text": "Goodnight!", "is_correct": true },
-        { "id": "b", "text": "Hello!", "is_correct": false },
-        { "id": "c", "text": "(say nothing)", "is_correct": false }
+        {
+          "id": "a",
+          "text": "Goodnight!",
+          "is_correct": true
+        },
+        {
+          "id": "b",
+          "text": "Hello!",
+          "is_correct": false
+        },
+        {
+          "id": "c",
+          "text": "(say nothing)",
+          "is_correct": false
+        }
       ],
-      "voice_accepts": ["goodnight", "good night", "night night"],
+      "voice_accepts": [
+        "goodnight",
+        "good night",
+        "night night"
+      ],
       "hint_on_wrong": "We say 'Goodnight' before going to sleep.",
       "hint_image_url": null,
       "praise_on_correct": "Sweet dreams, friend!"
