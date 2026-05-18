@@ -46,8 +46,15 @@ export function BottomNav() {
   const { pathname } = useLocation();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 px-4 pt-3 pb-4 pointer-events-none">
-      <div className="pointer-events-auto max-w-md mx-auto flex items-center justify-around bg-white rounded-full px-3 py-2 border-[4px] border-white shadow-[0_6px_0_rgba(0,0,0,0.08),0_-2px_10px_rgba(0,0,0,0.04)]">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 px-4 pt-3 pb-5 pointer-events-none">
+      <div
+        className={[
+          "pointer-events-auto max-w-md mx-auto flex items-center justify-around",
+          "bg-white rounded-full px-3 py-2",
+          "border-[5px] border-white",
+          "shadow-[0_10px_24px_rgba(31,111,216,0.18),0_4px_0_rgba(11,61,138,0.06),inset_0_2px_0_rgba(255,255,255,0.7)]",
+        ].join(" ")}
+      >
         {TABS.map((tab) => {
           const active =
             pathname === tab.to ||
@@ -61,7 +68,7 @@ export function BottomNav() {
                 "active:translate-y-[3px] active:!shadow-none",
                 active
                   ? "bg-hoovy-sky text-white border-[3px] border-white shadow-[0_4px_0_#1C86D9]"
-                  : "text-hoovy-navy/60 hover:text-hoovy-sky",
+                  : "text-hoovy-navy/55 hover:text-hoovy-sky",
               ].join(" ")}
             >
               {tab.icon}

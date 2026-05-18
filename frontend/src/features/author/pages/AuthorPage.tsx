@@ -203,7 +203,7 @@ function AuthorContent() {
   };
 
   return (
-    <SceneBackdrop variant="playground">
+    <SceneBackdrop variant="meadow">
       <div className="min-h-dvh flex flex-col">
         {/* Header card */}
         <header className="px-4 pt-4 max-w-5xl w-full mx-auto">
