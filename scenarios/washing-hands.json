@@ -3,7 +3,7 @@
   "title": "Washing hands before lunch",
   "skill_domain": "practical",
   "difficulty": 1,
-  "thumbnail_url": null,
+  "thumbnail_url": "/static/images/washing-hands/thumb.png",
   "estimated_minutes": 3,
   "language": "en",
   "child_interests": null,
@@ -12,15 +12,32 @@
       "id": "step-1",
       "order": 1,
       "teacher_prompt": "It's lunch time! What do you do before you eat?",
-      "scene_image_url": null,
+      "scene_image_url": "/static/images/washing-hands/step-1.png",
       "scene_image_prompt": "Hoovy the otter at a bright pastel kitchen with a lunch plate ready, looking at his paws",
       "response_type": "voice_or_choice",
       "choices": [
-        { "id": "a", "text": "Wash my hands", "is_correct": true },
-        { "id": "b", "text": "Eat right away", "is_correct": false },
-        { "id": "c", "text": "Play with food", "is_correct": false }
+        {
+          "id": "a",
+          "text": "Wash my hands",
+          "is_correct": true
+        },
+        {
+          "id": "b",
+          "text": "Eat right away",
+          "is_correct": false
+        },
+        {
+          "id": "c",
+          "text": "Play with food",
+          "is_correct": false
+        }
       ],
-      "voice_accepts": ["wash hands", "wash my hands", "clean hands", "wash"],
+      "voice_accepts": [
+        "wash hands",
+        "wash my hands",
+        "clean hands",
+        "wash"
+      ],
       "hint_on_wrong": "Clean hands keep us healthy. Wash them first.",
       "hint_image_url": null,
       "praise_on_correct": "Smart choice! Clean hands first.",
@@ -30,15 +47,32 @@
       "id": "step-2",
       "order": 2,
       "teacher_prompt": "You're at the sink. What do you use to wash?",
-      "scene_image_url": null,
+      "scene_image_url": "/static/images/washing-hands/step-2.png",
       "scene_image_prompt": "Hoovy the otter at a kid-height bathroom sink reaching for soap, warm pastel bathroom",
       "response_type": "voice_or_choice",
       "choices": [
-        { "id": "a", "text": "Soap and water", "is_correct": true },
-        { "id": "b", "text": "Just air", "is_correct": false },
-        { "id": "c", "text": "Toothpaste", "is_correct": false }
+        {
+          "id": "a",
+          "text": "Soap and water",
+          "is_correct": true
+        },
+        {
+          "id": "b",
+          "text": "Just air",
+          "is_correct": false
+        },
+        {
+          "id": "c",
+          "text": "Toothpaste",
+          "is_correct": false
+        }
       ],
-      "voice_accepts": ["soap and water", "soap", "water and soap", "soap water"],
+      "voice_accepts": [
+        "soap and water",
+        "soap",
+        "water and soap",
+        "soap water"
+      ],
       "hint_on_wrong": "Soap and water wash the germs away.",
       "hint_image_url": null,
       "praise_on_correct": "Bubbly soap helps the most!",
@@ -48,15 +82,32 @@
       "id": "step-3",
       "order": 3,
       "teacher_prompt": "All clean! What's the last step?",
-      "scene_image_url": null,
+      "scene_image_url": "/static/images/washing-hands/step-3.png",
       "scene_image_prompt": "Hoovy the otter drying his paws on a fluffy yellow towel, smiling, pastel bathroom",
       "response_type": "voice_or_choice",
       "choices": [
-        { "id": "a", "text": "Dry my hands", "is_correct": true },
-        { "id": "b", "text": "Wipe on my shirt", "is_correct": false },
-        { "id": "c", "text": "Leave them wet", "is_correct": false }
+        {
+          "id": "a",
+          "text": "Dry my hands",
+          "is_correct": true
+        },
+        {
+          "id": "b",
+          "text": "Wipe on my shirt",
+          "is_correct": false
+        },
+        {
+          "id": "c",
+          "text": "Leave them wet",
+          "is_correct": false
+        }
       ],
-      "voice_accepts": ["dry hands", "dry my hands", "towel", "dry"],
+      "voice_accepts": [
+        "dry hands",
+        "dry my hands",
+        "towel",
+        "dry"
+      ],
       "hint_on_wrong": "Dry your hands on a towel so they're not drippy.",
       "hint_image_url": null,
       "praise_on_correct": "Now you're ready for lunch!"

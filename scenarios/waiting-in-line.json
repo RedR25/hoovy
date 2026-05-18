@@ -3,7 +3,7 @@
   "title": "Waiting your turn",
   "skill_domain": "social",
   "difficulty": 2,
-  "thumbnail_url": null,
+  "thumbnail_url": "/static/images/waiting-in-line/thumb.png",
   "estimated_minutes": 3,
   "language": "en",
   "child_interests": null,
@@ -12,15 +12,33 @@
       "id": "step-1",
       "order": 1,
       "teacher_prompt": "There is a line for the slide. What do you do?",
-      "scene_image_url": null,
+      "scene_image_url": "/static/images/waiting-in-line/step-1.png",
       "scene_image_prompt": "Hoovy the otter at a sunny playground approaching a line of kids waiting for a slide",
       "response_type": "voice_or_choice",
       "choices": [
-        { "id": "a", "text": "Stand at the back of the line", "is_correct": true },
-        { "id": "b", "text": "Cut to the front", "is_correct": false },
-        { "id": "c", "text": "Push the kids out", "is_correct": false }
+        {
+          "id": "a",
+          "text": "Stand at the back of the line",
+          "is_correct": true
+        },
+        {
+          "id": "b",
+          "text": "Cut to the front",
+          "is_correct": false
+        },
+        {
+          "id": "c",
+          "text": "Push the kids out",
+          "is_correct": false
+        }
       ],
-      "voice_accepts": ["stand", "back of the line", "wait", "go to the back", "line up"],
+      "voice_accepts": [
+        "stand",
+        "back of the line",
+        "wait",
+        "go to the back",
+        "line up"
+      ],
       "hint_on_wrong": "We line up behind everyone else and wait our turn.",
       "hint_image_url": null,
       "praise_on_correct": "Good job lining up!",
@@ -30,15 +48,32 @@
       "id": "step-2",
       "order": 2,
       "teacher_prompt": "While waiting, how should you act?",
-      "scene_image_url": null,
+      "scene_image_url": "/static/images/waiting-in-line/step-2.png",
       "scene_image_prompt": "Hoovy the otter calmly waiting in a line of smiling kids on a sunny playground",
       "response_type": "voice_or_choice",
       "choices": [
-        { "id": "a", "text": "Wait patiently", "is_correct": true },
-        { "id": "b", "text": "Yell really loud", "is_correct": false },
-        { "id": "c", "text": "Run around the line", "is_correct": false }
+        {
+          "id": "a",
+          "text": "Wait patiently",
+          "is_correct": true
+        },
+        {
+          "id": "b",
+          "text": "Yell really loud",
+          "is_correct": false
+        },
+        {
+          "id": "c",
+          "text": "Run around the line",
+          "is_correct": false
+        }
       ],
-      "voice_accepts": ["wait patiently", "be patient", "wait", "patient"],
+      "voice_accepts": [
+        "wait patiently",
+        "be patient",
+        "wait",
+        "patient"
+      ],
       "hint_on_wrong": "Quiet and patient — everyone gets a turn.",
       "hint_image_url": null,
       "praise_on_correct": "Patience is a superpower.",
@@ -48,15 +83,32 @@
       "id": "step-3",
       "order": 3,
       "teacher_prompt": "It's your turn! What do you say to the friend behind you when you're done?",
-      "scene_image_url": null,
+      "scene_image_url": "/static/images/waiting-in-line/step-3.png",
       "scene_image_prompt": "Hoovy the otter sliding down a colorful slide, waving back at the next kid in line",
       "response_type": "voice_or_choice",
       "choices": [
-        { "id": "a", "text": "Have fun!", "is_correct": true },
-        { "id": "b", "text": "Move!", "is_correct": false },
-        { "id": "c", "text": "(say nothing)", "is_correct": false }
+        {
+          "id": "a",
+          "text": "Have fun!",
+          "is_correct": true
+        },
+        {
+          "id": "b",
+          "text": "Move!",
+          "is_correct": false
+        },
+        {
+          "id": "c",
+          "text": "(say nothing)",
+          "is_correct": false
+        }
       ],
-      "voice_accepts": ["have fun", "your turn", "enjoy", "go ahead"],
+      "voice_accepts": [
+        "have fun",
+        "your turn",
+        "enjoy",
+        "go ahead"
+      ],
       "hint_on_wrong": "Be kind — tell the next kid 'Have fun!'",
       "hint_image_url": null,
       "praise_on_correct": "What a friend!"

@@ -1,4 +1,27 @@
-# Hoovy
+# Hoovy 🦦
+
+**A warm little learning buddy for kids on the autism spectrum — and the families who love them.**
+
+Getting structured therapy for an autistic child is hard. Waitlists stretch for months. Sessions cost $80–$120 an hour. And even when a family finally finds a spot, the real learning often has to happen at home — between visits, on the couch, in the moments when a kid is ready to try.
+
+Hoovy is the kitchen-table version of that learning loop. It's gentle, patient, and always available.
+
+### How a session feels
+
+Your child taps an episode and our cheerful otter, Hoovy, waves hello. A calm teacher voice asks a friendly question — *"You need help reaching the crayons. What could you say?"* — and your child answers out loud. Hoovy listens, then either cheers them on (*"Great asking! That was very polite."*) or quietly offers a picture hint and invites them to try again. If their attention drifts, Hoovy waits without buzzers or timers, and gently re-engages when they're ready — the way a thoughtful therapist would.
+
+Every try is logged so parents and therapists can see what's clicking and where to slow down. Nothing is pass/fail. It's a learning *loop*, not a test.
+
+### What makes it different
+
+- **It runs on your device.** Speech understanding happens locally with **Gemma 4 E2B** through Ollama, and the friendly voice is synthesized in-process by **Kokoro**. Your child's audio never leaves your computer. No cloud bills, no microphone uploads, no privacy questions to wonder about late at night.
+- **You can author your own lessons.** Tell Hoovy in one sentence — *"teach my kid to ask for water, themed around dinosaurs"* — and a Gemma authoring pass drafts a full scenario in under a minute, complete with prompts, accepted answers, gentle hints, and matching illustrations rendered by Gemini and cached forever.
+- **It meets your kid where they already love to be.** Add interests like trains, dinosaurs, or princesses and the scenes adapt around them.
+- **It's clinical methodology, not a chatbot in a friendly skin.** Hoovy uses the same trial-and-praise loop that licensed ABA therapists use — just warm, patient, and finally within reach for every family.
+
+---
+
+### For developers
 
 Single-process monolith: FastAPI serves both the JSON API and the built React SPA. One container, one port, no CORS in prod.
 
