@@ -28,7 +28,7 @@ install:
 dev:
 	npx --yes concurrently --kill-others-on-fail \
 		--names "API,WEB" --prefix-colors "magenta,cyan" \
-		"backend\.venv\Scripts\uvicorn.exe --app-dir backend app.main:app --reload --host 0.0.0.0 --port 8000" \
+		"backend\.venv\Scripts\uvicorn.exe --app-dir backend app.main:app --reload --reload-dir backend\\app --host 0.0.0.0 --port 8000" \
 		"npm --prefix frontend run dev"
 
 up:
